@@ -17,6 +17,9 @@ ICON_ICNS = ROOT / "packaging" / "icons" / "app.icns"
 
 # 必须用项目根下的绝对路径；相对路径会相对 .spec 所在目录，误变成 packaging/app
 datas = [(str(ROOT / "app"), "app")]
+# Windows：把 app.ico 放在与 AC-Tracker.exe 同级，供 Inno 快捷方式 IconFilename / 安装向导使用（仅靠 EXE 内嵌图标在部分环境仍显示旧图标）
+if sys.platform == "win32" and ICON_ICO.is_file():
+    datas.append((str(ICON_ICO), "."))
 binaries = []
 hiddenimports: list[str] = []
 
