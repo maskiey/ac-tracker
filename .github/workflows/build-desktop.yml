@@ -78,6 +78,9 @@ jobs:
         run: python -c "import webview; import run_desktop; import app.main"
 
       - name: Generate app.ico (from app/static/icon.png)
+        env:
+          PYTHONUTF8: "1"
+          PYTHONIOENCODING: "utf-8"
         run: |
           pip install pillow
           python packaging/generate_icons.py

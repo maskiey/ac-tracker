@@ -20,6 +20,18 @@ ICNS = ROOT / "packaging" / "icons" / "app.icns"
 ICONSET = ROOT / "packaging" / "icons" / "AppIcon.iconset"
 
 
+def _configure_stdio() -> None:
+    """Windows GHA defaults to cp1252; reconfigure so any log line cannot crash the step."""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            try:
+                stream.reconfigure(errors="replace")
+            except Exception:
+                pass
+
+
 def build_rgba_icon() -> Image.Image:
     im = Image.open(SRC).convert("RGBA")
     w, h = im.size
@@ -38,6 +50,7 @@ def build_rgba_icon() -> Image.Image:
 
 
 def main() -> None:
+    _configure_stdio()
     if not SRC.is_file():
         print("Missing icon source: packaging/icon_source.png or", OUT_PNG, file=sys.stderr)
         sys.exit(1)
@@ -54,8 +67,7 @@ def main() -> None:
     print("Wrote", ICO)
 
     if sys.platform != "darwin":
-        # Windows CI uses cp1252; avoid non-ASCII in print() (UnicodeEncodeError).
-        print("Not macOS: skipping app.icns (build on macOS or commit packaging/icons/app.icns)")
+        print("Skip app.icns on non-macOS (build icns on macOS or commit packaging/icons/app.icns)")
         return
 
     if shutil.which("sips") and shutil.which("iconutil"):
