@@ -7,7 +7,7 @@ from pathlib import Path
 # Analysis 阶段遍历 FastAPI/SQLAlchemy 等依赖时，默认递归深度可能不够导致构建失败
 sys.setrecursionlimit(max(sys.getrecursionlimit(), 10_000))
 
-from PyInstaller.utils.hooks import collect_all
+from PyInstaller.utils.hooks import collect_all, collect_data_files, collect_dynamic_libs
 
 # PyInstaller 提供 SPECPATH = 本 spec 所在目录
 ROOT = Path(SPECPATH).parent.resolve()  # noqa: F821
@@ -41,12 +41,31 @@ for pkg in (
     except Exception:
         pass
 
+# Windows：与 pywebview 自带 PyInstaller hook 对齐，并打入 pythonnet/clr（WinForms + WebView2 必需）
+if sys.platform == "win32":
+    try:
+        datas += collect_data_files("webview", subdir="lib")
+        datas += collect_data_files("webview", subdir="js")
+        binaries += collect_dynamic_libs("webview")
+    except Exception:
+        pass
+    for _pkg in ("pythonnet", "clr_loader"):
+        try:
+            d, b, h = collect_all(_pkg)
+            datas += d
+            binaries += b
+            hiddenimports += h
+        except Exception:
+            pass
+
 hiddenimports += [
     "uvicorn.loops",
     "uvicorn.loops.auto",
     "uvicorn.protocols.http.auto",
     "uvicorn.lifespan.on",
     "uvicorn.lifespan.off",
+    "clr",
+    "clr_loader",
 ]
 
 a = Analysis(

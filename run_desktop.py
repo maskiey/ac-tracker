@@ -19,6 +19,40 @@ def _is_frozen() -> bool:
     return getattr(sys, "frozen", False) is True
 
 
+def _configure_pythonnet_for_frozen_windows() -> None:
+    """PyInstaller + pywebview：WinForms 后端通过 pythonnet 加载 CLR，须指向内嵌 python3xx.dll。
+
+    未设置 PYTHONNET_PYDLL 时，目标机上常见表现为双击无界面、进程瞬间退出（日志里多为
+    Failed to resolve Python.Runtime / cannot call null pointer）。
+    """
+    if sys.platform != "win32" or not _is_frozen():
+        return
+    if os.environ.get("PYTHONNET_PYDLL"):
+        return
+    root = _project_root()
+    candidates = sorted(root.glob("python3*.dll"), key=lambda p: p.name, reverse=True)
+    for p in candidates:
+        if p.is_file():
+            os.environ["PYTHONNET_PYDLL"] = str(p.resolve())
+            if _is_frozen():
+                _append_log("PYTHONNET_PYDLL=" + os.environ["PYTHONNET_PYDLL"])
+            return
+
+
+def _show_windows_message(title: str, text: str, *, error: bool = False) -> None:
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+
+        flags = 0x10 if error else 0x40  # MB_ICONERROR | MB_ICONINFORMATION
+        t = (title or "AC Tracker")[:256]
+        x = (text or "")[:1024]
+        ctypes.windll.user32.MessageBoxW(None, x, t, flags)
+    except Exception:
+        pass
+
+
 def _project_root() -> Path:
     """PyInstaller onedir：资源在 exe 同级的 _internal；_MEIPASS 指向该目录。"""
     if _is_frozen():
@@ -119,6 +153,7 @@ def main() -> None:
     os.chdir(root)
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
+    _configure_pythonnet_for_frozen_windows()
     # 无控制台时 stderr 不可见，启动失败请查看 %USERPROFILE%\.acm-tracker\ac-tracker.log
     if _is_frozen():
         _append_log("---\n启动: cwd=" + str(Path.cwd()) + " root=" + str(root) + " exe=" + sys.executable)
@@ -139,14 +174,14 @@ def main() -> None:
     base = int(os.environ.get("ACM_TRACKER_PORT", "17890"))
     port = _first_free_port("127.0.0.1", base, 24)
     if port is None:
-        print(
-            "AC Tracker: 在",
-            base,
-            "–",
-            base + 23,
-            "范围内没有可用端口。请关闭占用端口的程序或设置 ACM_TRACKER_PORT。",
-            file=sys.stderr,
+        msg = (
+            f"AC Tracker: 在 {base}–{base + 23} 范围内没有可用端口。"
+            "请关闭占用端口的程序或设置环境变量 ACM_TRACKER_PORT。"
         )
+        print(msg, file=sys.stderr)
+        if _is_frozen() and sys.platform == "win32":
+            _append_log(msg)
+            _show_windows_message("AC Tracker", msg, error=True)
         sys.exit(1)
     if port != base:
         print(f"AC Tracker: 端口 {base} 被占用，已改用 {port}。", file=sys.stderr)
@@ -158,18 +193,41 @@ def main() -> None:
     if fatal:
         print("AC Tracker: 启动 uvicorn 失败：", file=sys.stderr)
         traceback.print_exception(type(fatal[0]), fatal[0], fatal[0].__traceback__)
+        if _is_frozen() and sys.platform == "win32":
+            _append_log(
+                "uvicorn 线程异常:\n"
+                + "".join(traceback.format_exception(type(fatal[0]), fatal[0], fatal[0].__traceback__))
+            )
+            _show_windows_message(
+                "AC Tracker",
+                "本地服务启动失败。详情已写入 %USERPROFILE%\\.acm-tracker\\ac-tracker.log",
+                error=True,
+            )
         sys.exit(1)
     if not _wait_until_serving("127.0.0.1", port, fatal):
         if fatal:
             print("AC Tracker: 启动 uvicorn 失败：", file=sys.stderr)
             traceback.print_exception(type(fatal[0]), fatal[0], fatal[0].__traceback__)
+            if _is_frozen() and sys.platform == "win32":
+                _append_log(
+                    "uvicorn 未就绪:\n"
+                    + "".join(traceback.format_exception(type(fatal[0]), fatal[0], fatal[0].__traceback__))
+                )
+                _show_windows_message(
+                    "AC Tracker",
+                    "本地服务启动失败。请查看 %USERPROFILE%\\.acm-tracker\\ac-tracker.log",
+                    error=True,
+                )
         else:
-            print(
-                "AC Tracker: 本地服务在",
-                port,
-                "端口未及时就绪。若机器较慢可稍等；或检查防火墙/安全软件是否拦截本机回连。",
-                file=sys.stderr,
+            msg = (
+                "AC Tracker: 本地服务在 "
+                + str(port)
+                + " 端口未及时就绪。若机器较慢可稍等；或检查防火墙/安全软件是否拦截本机回连。"
             )
+            print(msg, file=sys.stderr)
+            if _is_frozen() and sys.platform == "win32":
+                _append_log(msg)
+                _show_windows_message("AC Tracker", msg, error=True)
         sys.exit(1)
 
     chosen = port
@@ -186,6 +244,14 @@ def main() -> None:
         import webview
     except Exception:
         _append_log("导入 webview 失败:\n" + traceback.format_exc())
+        if _is_frozen() and sys.platform == "win32":
+            _show_windows_message(
+                "AC Tracker",
+                "无法加载界面组件（pywebview）。若已排除杀毒软件拦截，"
+                "请安装 Microsoft Edge WebView2 运行时后重试；"
+                "详情见日志 %USERPROFILE%\\.acm-tracker\\ac-tracker.log",
+                error=True,
+            )
         raise
 
     # ?app=desktop 供前端加 html.desktop-shell，主滚动落在 body 上，避免 WKWebView 不向内层 overflow 传滚轮
@@ -215,6 +281,13 @@ def main() -> None:
         webview.start()
     except Exception:
         _append_log("webview.start 失败:\n" + traceback.format_exc())
+        if _is_frozen() and sys.platform == "win32":
+            _show_windows_message(
+                "AC Tracker",
+                "窗口启动失败。请安装 WebView2 运行时或查看日志："
+                "%USERPROFILE%\\.acm-tracker\\ac-tracker.log",
+                error=True,
+            )
         raise
 
 
@@ -227,4 +300,11 @@ if __name__ == "__main__":
     except Exception:
         if _is_frozen():
             _append_log("未捕获异常:\n" + traceback.format_exc())
+            if sys.platform == "win32":
+                tb = traceback.format_exc()
+                _show_windows_message(
+                    "AC Tracker",
+                    "启动失败。详情见 %USERPROFILE%\\.acm-tracker\\ac-tracker.log\n\n" + tb[-900:],
+                    error=True,
+                )
         raise

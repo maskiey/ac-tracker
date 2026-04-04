@@ -18,7 +18,9 @@
   - 若启动后窗口空白或报错，请安装：[WebView2 运行时](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)（Evergreen 安装包即可）。
 - **安装程序**（`AC-Tracker-Windows-Setup.exe`）默认安装到**当前用户**目录（`%LOCALAPPDATA%\Programs\AC Tracker`），无需管理员权限；若 SmartScreen 提示「未知发布者」，属未签名软件常见情况，可按提示「仍要运行」或自行在「Windows 安全中心」中放行。
 - 若安装后双击无反应或瞬间退出：请到 **`%USERPROFILE%\.acm-tracker\ac-tracker.log`** 查看启动日志（桌面版会将错误写入该文件）；并确认已安装 [WebView2 运行时](https://developer.microsoft.com/microsoft-edge/webview2/)。
-- 一般无需单独安装 **.NET**，当前 pywebview 的 WebView2 后端不额外要求用户手动装 .NET SDK。
+- **打包版说明**：界面使用 pywebview 的 Windows（WinForms）后端，依赖 **pythonnet** 与系统上的 **.NET Framework 4.x**（Windows 10/11 通常已具备）。安装包会在启动时自动将内嵌的 `python3xx.dll` 告知 CLR（`PYTHONNET_PYDLL`），避免「无窗口、进程秒退」类问题。
+- 若日志中出现 `Failed to resolve Python.Runtime`、`cannot call null pointer` 等与 **pythonnet/CLR** 相关的字样：请使用**最新发布**的安装包/便携包；勿只复制单个 `.exe` 而丢弃同目录的 **`_internal` 文件夹**及全部文件。
+- 一般无需单独安装 **.NET SDK**；开发与运行期需要的是系统自带的 **.NET Framework** 运行时组件，而非 SDK。
 
 ### macOS
 
