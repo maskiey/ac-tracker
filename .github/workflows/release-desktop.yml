@@ -74,6 +74,11 @@ jobs:
       - name: Verify imports
         run: python -c "import webview; import run_desktop; import app.main"
 
+      - name: Generate app.ico (from app/static/icon.png)
+        run: |
+          pip install pillow
+          python packaging/generate_icons.py
+
       - name: PyInstaller (Windows)
         run: python -m PyInstaller packaging/acm_tracker.spec --noconfirm --clean
 

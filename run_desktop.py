@@ -125,7 +125,12 @@ def _first_free_port(host: str, start: int, count: int = 20) -> int | None:
 
 
 def _serve(port: int, fatal: list[BaseException]) -> None:
+    """非 Windows：在守护线程中启动 uvicorn（单进程）。"""
     try:
+        if sys.platform == "win32":
+            import asyncio
+
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         import uvicorn
 
         uvicorn.run(
@@ -137,6 +142,35 @@ def _serve(port: int, fatal: list[BaseException]) -> None:
         )
     except BaseException as exc:
         fatal.append(exc)
+
+
+def _uvicorn_child_main(port: int) -> None:
+    """Windows 专用：在子进程的「主线程」里跑 uvicorn。
+
+    CPython 在 Windows 上默认使用 ProactorEventLoop；在子线程里跑 uvicorn 时易出现无法监听、
+    或长时间无法就绪，界面即报「本地服务启动失败」。独立进程可避免该问题。
+    """
+    root = _project_root()
+    os.chdir(root)
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    _prepare_user_paths()
+    try:
+        import uvicorn
+
+        uvicorn.run(
+            "app.main:app",
+            host="127.0.0.1",
+            port=port,
+            log_level="warning",
+            access_log=False,
+        )
+    except BaseException:
+        try:
+            _append_log("uvicorn 子进程异常:\n" + traceback.format_exc())
+        except Exception:
+            pass
+        raise
 
 
 def _ensure_app_imports() -> None:
@@ -160,16 +194,17 @@ def main() -> None:
 
     _prepare_user_paths()
 
-    try:
-        _ensure_app_imports()
-    except Exception:
-        if _is_frozen():
-            print("AC Tracker: 无法加载内置后端。请重新下载安装包或向开发者反馈下列错误：", file=sys.stderr)
-            _append_log("导入 app.main 失败:\n" + traceback.format_exc())
-        else:
-            print("AC Tracker: 无法加载后端应用（app.main），请在项目根目录运行并执行 pip install -r requirements.txt：", file=sys.stderr)
-        traceback.print_exc()
-        sys.exit(1)
+    if sys.platform != "win32":
+        try:
+            _ensure_app_imports()
+        except Exception:
+            if _is_frozen():
+                print("AC Tracker: 无法加载内置后端。请重新下载安装包或向开发者反馈下列错误：", file=sys.stderr)
+                _append_log("导入 app.main 失败:\n" + traceback.format_exc())
+            else:
+                print("AC Tracker: 无法加载后端应用（app.main），请在项目根目录运行并执行 pip install -r requirements.txt：", file=sys.stderr)
+            traceback.print_exc()
+            sys.exit(1)
 
     base = int(os.environ.get("ACM_TRACKER_PORT", "17890"))
     port = _first_free_port("127.0.0.1", base, 24)
@@ -186,49 +221,62 @@ def main() -> None:
     if port != base:
         print(f"AC Tracker: 端口 {base} 被占用，已改用 {port}。", file=sys.stderr)
 
-    fatal: list[BaseException] = []
-    thread = threading.Thread(target=lambda: _serve(port, fatal), daemon=True)
-    thread.start()
-    time.sleep(0.2)
-    if fatal:
-        print("AC Tracker: 启动 uvicorn 失败：", file=sys.stderr)
-        traceback.print_exception(type(fatal[0]), fatal[0], fatal[0].__traceback__)
-        if _is_frozen() and sys.platform == "win32":
-            _append_log(
-                "uvicorn 线程异常:\n"
-                + "".join(traceback.format_exception(type(fatal[0]), fatal[0], fatal[0].__traceback__))
+    uvicorn_proc = None
+    if sys.platform == "win32":
+        import multiprocessing as mp
+
+        ctx = mp.get_context("spawn")
+        uvicorn_proc = ctx.Process(target=_uvicorn_child_main, args=(port,), name="acm-uvicorn")
+        uvicorn_proc.start()
+        deadline = time.time() + 45.0
+        ready = False
+        while time.time() < deadline:
+            if not uvicorn_proc.is_alive():
+                _append_log("uvicorn 进程已退出 exitcode=" + str(uvicorn_proc.exitcode))
+                break
+            try:
+                with socket.create_connection(("127.0.0.1", port), timeout=0.5):
+                    ready = True
+                    break
+            except OSError:
+                time.sleep(0.1)
+        if not ready:
+            if uvicorn_proc.is_alive():
+                uvicorn_proc.terminate()
+            try:
+                uvicorn_proc.join(timeout=5)
+            except Exception:
+                pass
+            msg = (
+                "AC Tracker: 本地服务未能启动。"
+                "请查看 %USERPROFILE%\\.acm-tracker\\ac-tracker.log"
             )
-            _show_windows_message(
-                "AC Tracker",
-                "本地服务启动失败。详情已写入 %USERPROFILE%\\.acm-tracker\\ac-tracker.log",
-                error=True,
-            )
-        sys.exit(1)
-    if not _wait_until_serving("127.0.0.1", port, fatal):
+            print(msg, file=sys.stderr)
+            if _is_frozen():
+                _append_log(msg)
+                _show_windows_message("AC Tracker", msg, error=True)
+            sys.exit(1)
+    else:
+        fatal: list[BaseException] = []
+        thread = threading.Thread(target=lambda: _serve(port, fatal), daemon=True)
+        thread.start()
+        time.sleep(0.2)
         if fatal:
             print("AC Tracker: 启动 uvicorn 失败：", file=sys.stderr)
             traceback.print_exception(type(fatal[0]), fatal[0], fatal[0].__traceback__)
-            if _is_frozen() and sys.platform == "win32":
-                _append_log(
-                    "uvicorn 未就绪:\n"
-                    + "".join(traceback.format_exception(type(fatal[0]), fatal[0], fatal[0].__traceback__))
+            sys.exit(1)
+        if not _wait_until_serving("127.0.0.1", port, fatal):
+            if fatal:
+                print("AC Tracker: 启动 uvicorn 失败：", file=sys.stderr)
+                traceback.print_exception(type(fatal[0]), fatal[0], fatal[0].__traceback__)
+            else:
+                print(
+                    "AC Tracker: 本地服务在",
+                    port,
+                    "端口未及时就绪。若机器较慢可稍等；或检查防火墙/安全软件是否拦截本机回连。",
+                    file=sys.stderr,
                 )
-                _show_windows_message(
-                    "AC Tracker",
-                    "本地服务启动失败。请查看 %USERPROFILE%\\.acm-tracker\\ac-tracker.log",
-                    error=True,
-                )
-        else:
-            msg = (
-                "AC Tracker: 本地服务在 "
-                + str(port)
-                + " 端口未及时就绪。若机器较慢可稍等；或检查防火墙/安全软件是否拦截本机回连。"
-            )
-            print(msg, file=sys.stderr)
-            if _is_frozen() and sys.platform == "win32":
-                _append_log(msg)
-                _show_windows_message("AC Tracker", msg, error=True)
-        sys.exit(1)
+            sys.exit(1)
 
     chosen = port
 
@@ -244,6 +292,12 @@ def main() -> None:
         import webview
     except Exception:
         _append_log("导入 webview 失败:\n" + traceback.format_exc())
+        if uvicorn_proc is not None and uvicorn_proc.is_alive():
+            uvicorn_proc.terminate()
+            try:
+                uvicorn_proc.join(timeout=5)
+            except Exception:
+                pass
         if _is_frozen() and sys.platform == "win32":
             _show_windows_message(
                 "AC Tracker",
@@ -289,6 +343,13 @@ def main() -> None:
                 error=True,
             )
         raise
+    finally:
+        if uvicorn_proc is not None and uvicorn_proc.is_alive():
+            uvicorn_proc.terminate()
+            try:
+                uvicorn_proc.join(timeout=10)
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":

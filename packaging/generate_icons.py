@@ -10,8 +10,11 @@ from pathlib import Path
 from PIL import Image, ImageChops, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "packaging" / "icon_source.png"
 OUT_PNG = ROOT / "app" / "static" / "icon.png"
+# 优先设计稿；否则用已生成的 Web 图标（便于 CI 只检出仓库即可打 Windows .ico）
+SRC = ROOT / "packaging" / "icon_source.png"
+if not SRC.is_file():
+    SRC = OUT_PNG
 ICO = ROOT / "packaging" / "icons" / "app.ico"
 ICNS = ROOT / "packaging" / "icons" / "app.icns"
 ICONSET = ROOT / "packaging" / "icons" / "AppIcon.iconset"
@@ -36,12 +39,15 @@ def build_rgba_icon() -> Image.Image:
 
 def main() -> None:
     if not SRC.is_file():
-        print("缺少", SRC, file=sys.stderr)
+        print("缺少图标源文件：packaging/icon_source.png 或", OUT_PNG, file=sys.stderr)
         sys.exit(1)
     ICO.parent.mkdir(parents=True, exist_ok=True)
     im = build_rgba_icon()
-    im.save(OUT_PNG, "PNG")
-    print("Wrote", OUT_PNG)
+    if SRC.resolve() != OUT_PNG.resolve():
+        im.save(OUT_PNG, "PNG")
+        print("Wrote", OUT_PNG)
+    else:
+        print("使用已有", OUT_PNG, "生成 .ico/.icns")
     sizes = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
     imgs = [im.resize(sz, Image.Resampling.LANCZOS) for sz in sizes]
     imgs[0].save(ICO, format="ICO", sizes=[(i.width, i.height) for i in imgs], append_images=imgs[1:])
