@@ -40,8 +40,8 @@ Source: "..\dist\AC-Tracker\*"; DestDir: "{app}"; Flags: ignoreversion recursesu
 [Icons]
 ; WorkingDir 必须与 exe 同目录，否则 PyInstaller/WebView2 从快捷方式启动时 cwd 可能为 System32 导致无法运行
 ; IconFilename 指向与 exe 同目录的 app.ico（由 PyInstaller 打入 dist），避免仅依赖 EXE 内嵌图标时桌面仍显示默认/旧图标
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\app.ico"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\app.ico"; Tasks: desktopicon
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\app.ico"; IconIndex: 0
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\app.ico"; IconIndex: 0; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent

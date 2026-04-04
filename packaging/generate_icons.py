@@ -49,6 +49,25 @@ def build_rgba_icon() -> Image.Image:
     return Image.merge("RGBA", (r, g, b, a_new))
 
 
+def _write_windows_ico(master_rgba: Image.Image, path: Path) -> None:
+    """Write a multi-size .ico suitable for Explorer / taskbar / PyInstaller.
+
+    Windows shell and PyInstaller embed the *first* frame of the ICO as the primary
+    application icon. If that frame is 16x16, large UI shows a blurry upscaled
+    icon. Order sizes descending so the first image is 256x256.
+    """
+    # 16–256 + high-DPI sizes used by Windows 10/11 shell
+    sizes = (256, 192, 128, 96, 64, 48, 40, 32, 24, 16)
+    imgs = [master_rgba.resize((s, s), Image.Resampling.LANCZOS) for s in sizes]
+    first, *rest = imgs
+    first.save(
+        path,
+        format="ICO",
+        sizes=[(i.width, i.height) for i in imgs],
+        append_images=rest,
+    )
+
+
 def main() -> None:
     _configure_stdio()
     if not SRC.is_file():
@@ -61,9 +80,7 @@ def main() -> None:
         print("Wrote", OUT_PNG)
     else:
         print("Using existing", OUT_PNG, "to build .ico/.icns")
-    sizes = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
-    imgs = [im.resize(sz, Image.Resampling.LANCZOS) for sz in sizes]
-    imgs[0].save(ICO, format="ICO", sizes=[(i.width, i.height) for i in imgs], append_images=imgs[1:])
+    _write_windows_ico(im, ICO)
     print("Wrote", ICO)
 
     if sys.platform != "darwin":
