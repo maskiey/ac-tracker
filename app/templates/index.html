@@ -5,6 +5,9 @@
   <script>
     (function () {
       try {
+        if (new URLSearchParams(window.location.search).get("app") === "desktop") {
+          document.documentElement.classList.add("desktop-shell");
+        }
         var prefKey = "acm-tracker-theme-preference";
         var legacyKey = "acm-tracker-theme";
         var pref = localStorage.getItem(prefKey);
@@ -24,7 +27,9 @@
     })();
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>AC Tracker</title>
+  <title>AC Tracker · 刷题轨迹</title>
+  <meta name="application-name" content="AC Tracker · 刷题轨迹" />
+  <meta name="apple-mobile-web-app-title" content="AC Tracker" />
   <meta name="theme-color" content="#1d4ed8" id="meta-theme-color" />
   <link rel="manifest" href="/static/manifest.webmanifest" />
   <link rel="icon" href="/static/icon.svg" type="image/svg+xml" />

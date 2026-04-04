@@ -67,10 +67,13 @@
   --code-fg: #1e293b;
   /* 与 body 渐变末端一致，避免视口两侧/滚动条露白 */
   --app-canvas: #e8eef5;
-  --app-scrollbar-track: #dce3ed;
-  --app-scrollbar-thumb: rgba(71, 85, 105, 0.42);
+  --app-scrollbar-track: transparent;
+  --app-scrollbar-thumb: rgba(71, 85, 105, 0.35);
+  --app-scrollbar-thumb-hover: rgba(71, 85, 105, 0.55);
+  --app-scrollbar-thumb-active: rgba(29, 78, 216, 0.45);
   --app-chrome-bg: rgba(248, 250, 252, 0.94);
   --app-tabbar-bg: rgba(241, 245, 249, 0.97);
+  color-scheme: light;
 }
 
 [data-theme="dark"] {
@@ -138,10 +141,13 @@
   --chart-cal-border: #30363d;
   --code-fg: #e2e8f0;
   --app-canvas: #0a0c10;
-  --app-scrollbar-track: #151922;
-  --app-scrollbar-thumb: rgba(148, 163, 184, 0.38);
+  --app-scrollbar-track: transparent;
+  --app-scrollbar-thumb: rgba(148, 163, 184, 0.32);
+  --app-scrollbar-thumb-hover: rgba(148, 163, 184, 0.5);
+  --app-scrollbar-thumb-active: rgba(56, 189, 248, 0.45);
   --app-chrome-bg: rgba(16, 18, 26, 0.94);
   --app-tabbar-bg: rgba(14, 16, 22, 0.96);
+  color-scheme: dark;
 }
 
 * {
@@ -150,8 +156,72 @@
 
 html {
   background-color: var(--app-canvas);
-  overflow-x: hidden;
+  overflow-x: clip;
   height: 100%;
+}
+
+/* 桌面壳（pywebview）：由 body 承担纵向滚动，原生滚轮可作用在 document 上；内层 .app-main 不再 overflow-y:auto */
+html.desktop-shell {
+  height: auto;
+  overflow-y: visible;
+}
+
+html.desktop-shell body {
+  overflow-y: auto;
+  overflow-x: clip;
+  overscroll-behavior-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+}
+
+html.desktop-shell .app-root {
+  overflow: visible;
+  min-height: 100dvh;
+}
+
+html.desktop-shell .app-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: visible;
+  overscroll-behavior: auto;
+  scroll-padding-bottom: 12px;
+}
+
+html.desktop-shell .app-topbar {
+  position: sticky;
+  top: 0;
+}
+
+html.desktop-shell .app-tabbar {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+}
+
+html.desktop-shell body::-webkit-scrollbar {
+  width: 7px;
+}
+
+html.desktop-shell body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html.desktop-shell body::-webkit-scrollbar-thumb {
+  background: var(--app-scrollbar-thumb);
+  border-radius: 100px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+html.desktop-shell body::-webkit-scrollbar-thumb:hover {
+  background: var(--app-scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+html.desktop-shell body::-webkit-scrollbar-thumb:active {
+  background: var(--app-scrollbar-thumb-active);
+  background-clip: padding-box;
 }
 
 body {
@@ -161,26 +231,25 @@ body {
   background: var(--body-bg);
   background-color: var(--app-canvas);
   min-height: 100%;
-  overflow-x: hidden;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: clip;
   -webkit-font-smoothing: antialiased;
 }
 
-/* —— App 壳：顶栏 + 可滚动主区 + 底栏 —— */
+/* —— App 壳：顶栏 + 可滚动主区 + 底栏（避免 100vh+100vw 与浏览器缩放打架） —— */
 .app-root {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   width: 100%;
   max-width: min(960px, 100%);
-  min-height: 100vh;
   min-height: 100dvh;
-  height: 100vh;
-  height: 100dvh;
-  max-height: 100vh;
-  max-height: 100dvh;
   margin: 0 auto;
   overflow: hidden;
-  padding-left: env(safe-area-inset-left, 0);
-  padding-right: env(safe-area-inset-right, 0);
+  padding-left: max(0px, env(safe-area-inset-left, 0));
+  padding-right: max(0px, env(safe-area-inset-right, 0));
   box-sizing: border-box;
 }
 
@@ -214,27 +283,59 @@ body {
 .app-main {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   scroll-padding-bottom: 12px;
+  scrollbar-width: thin;
   scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
-  scrollbar-gutter: stable;
+  scrollbar-gutter: auto;
 }
 
-.app-main::-webkit-scrollbar {
-  width: 10px;
+/* WebKit：细滚动条，与主内容区 / 表格 / 热力图横向条统一 */
+.app-main::-webkit-scrollbar,
+.problems::-webkit-scrollbar {
+  width: 7px;
 }
 
-.app-main::-webkit-scrollbar-track {
-  background: var(--app-scrollbar-track);
+.sync-table-wrap::-webkit-scrollbar,
+.contrib-scroll::-webkit-scrollbar {
+  height: 7px;
 }
 
-.app-main::-webkit-scrollbar-thumb {
+.app-main::-webkit-scrollbar-track,
+.problems::-webkit-scrollbar-track,
+.sync-table-wrap::-webkit-scrollbar-track,
+.contrib-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-main::-webkit-scrollbar-thumb,
+.problems::-webkit-scrollbar-thumb,
+.sync-table-wrap::-webkit-scrollbar-thumb,
+.contrib-scroll::-webkit-scrollbar-thumb {
   background: var(--app-scrollbar-thumb);
-  border-radius: 6px;
-  border: 2px solid var(--app-scrollbar-track);
+  border-radius: 100px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.app-main::-webkit-scrollbar-thumb:hover,
+.problems::-webkit-scrollbar-thumb:hover,
+.sync-table-wrap::-webkit-scrollbar-thumb:hover,
+.contrib-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--app-scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+.app-main::-webkit-scrollbar-thumb:active,
+.problems::-webkit-scrollbar-thumb:active,
+.sync-table-wrap::-webkit-scrollbar-thumb:active,
+.contrib-scroll::-webkit-scrollbar-thumb:active {
+  background: var(--app-scrollbar-thumb-active);
+  background-clip: padding-box;
 }
 
 .app-tabbar {
@@ -357,27 +458,20 @@ body {
 }
 
 .sync-table-wrap {
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
   scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
 }
 
-.sync-table-wrap::-webkit-scrollbar {
-  height: 8px;
-}
-
-.sync-table-wrap::-webkit-scrollbar-track {
-  background: var(--app-scrollbar-track);
-}
-
-.sync-table-wrap::-webkit-scrollbar-thumb {
-  background: var(--app-scrollbar-thumb);
-  border-radius: 4px;
-}
-
 .shell {
-  width: min(1180px, calc(100vw - 32px));
+  width: 100%;
+  max-width: 1180px;
   margin: 24px auto 48px;
+  padding: 0 16px;
+  box-sizing: border-box;
 }
 
 .app-layout {
@@ -567,9 +661,10 @@ button:disabled {
 
 .grid {
   display: grid;
-  grid-template-columns: 1.7fr 1fr;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
   gap: 18px;
   margin-top: 18px;
+  min-width: 0;
 }
 
 .grid.heatmap-home {
@@ -588,6 +683,7 @@ button:disabled {
 }
 
 .card {
+  min-width: 0;
   padding: 22px;
   border-radius: 24px;
   border: 1px solid var(--line);
@@ -674,20 +770,6 @@ button:disabled {
   /* 独立合成层，减轻横向滚动时的整页重绘 */
   transform: translateZ(0);
   backface-visibility: hidden;
-}
-
-.contrib-scroll::-webkit-scrollbar {
-  height: 8px;
-}
-
-.contrib-scroll::-webkit-scrollbar-track {
-  background: var(--app-scrollbar-track);
-  border-radius: 4px;
-}
-
-.contrib-scroll::-webkit-scrollbar-thumb {
-  background: var(--app-scrollbar-thumb);
-  border-radius: 4px;
 }
 
 .contrib-canvas {
@@ -854,7 +936,10 @@ button:disabled {
   display: grid;
   gap: 10px;
   max-height: 318px;
+  min-width: 0;
   overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
 }
 
 .problems li {
@@ -1023,6 +1108,11 @@ button:disabled {
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 12px;
+  min-width: 0;
+}
+
+.section-head h2 {
+  min-width: 0;
 }
 
 .sub-panel {

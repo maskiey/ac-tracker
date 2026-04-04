@@ -235,6 +235,13 @@ const VIEW_PATH = {
   settings: "/settings",
 };
 
+/** 桌面壳下保留 ?app=desktop，避免刷新后失去 body 滚动布局 */
+function pathWithDesktopShell(path) {
+  if (!document.documentElement.classList.contains("desktop-shell")) return path;
+  const sep = path.includes("?") ? "&" : "?";
+  return `${path}${sep}app=desktop`;
+}
+
 function switchView(view, updateHistory = true) {
   activeView = view;
   navButtons.forEach((button) => {
@@ -246,7 +253,7 @@ function switchView(view, updateHistory = true) {
   if (updateHistory) {
     const path = VIEW_PATH[view];
     if (path) {
-      history.pushState({ view }, "", path);
+      history.pushState({ view }, "", pathWithDesktopShell(path));
     }
   }
   requestAnimationFrame(() => {

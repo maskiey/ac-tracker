@@ -1,0 +1,97 @@
+# 推送 v* 标签时构建 macOS / Windows 安装包并上传到 GitHub Releases
+name: Release desktop packages
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-desktop.txt
+
+      - name: PyInstaller (macOS)
+        run: python -m PyInstaller packaging/acm_tracker.spec --noconfirm
+
+      - name: Zip artifacts
+        run: |
+          cd dist
+          zip -ry ../AC-Tracker-macos-app.zip "AC Tracker.app"
+          zip -ry ../AC-Tracker-macos-folder.zip AC-Tracker
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acm-tracker-macos
+          path: |
+            AC-Tracker-macos-app.zip
+            AC-Tracker-macos-folder.zip
+          if-no-files-found: error
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-desktop.txt
+
+      - name: PyInstaller (Windows)
+        run: python -m PyInstaller packaging/acm_tracker.spec --noconfirm
+
+      - name: Zip folder
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "dist\AC-Tracker" -DestinationPath "AC-Tracker-windows.zip" -Force
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acm-tracker-windows
+          path: AC-Tracker-windows.zip
+          if-no-files-found: error
+
+  release:
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: acm-tracker-macos
+          path: artifacts/macos
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: acm-tracker-windows
+          path: artifacts/windows
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: AC Tracker ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            artifacts/macos/AC-Tracker-macos-app.zip
+            artifacts/macos/AC-Tracker-macos-folder.zip
+            artifacts/windows/AC-Tracker-windows.zip

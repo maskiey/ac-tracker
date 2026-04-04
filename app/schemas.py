@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
 
 class SyncRequest(BaseModel):
-    source: str | None = Field(
+    source: Optional[str] = Field(
         default=None,
         description="codeforces, luogu, nowcoder, atcoder, or omitted for all",
     )
@@ -12,16 +14,16 @@ class SyncRequest(BaseModel):
 
 
 class ConfigPayload(BaseModel):
-    codeforces_handle: str | None = None
-    codeforces_cookie_kv: str | None = None
-    luogu_uid: str | None = None
-    luogu_username: str | None = None
-    luogu_ck_client_id: str | None = None
-    luogu_ck_uid: str | None = None
-    luogu_cookie_kv: str | None = None
-    nowcoder_uid: str | None = None
-    nowcoder_cookie_kv: str | None = None
-    atcoder_username: str | None = None
+    codeforces_handle: Optional[str] = None
+    codeforces_cookie_kv: Optional[str] = None
+    luogu_uid: Optional[str] = None
+    luogu_username: Optional[str] = None
+    luogu_ck_client_id: Optional[str] = None
+    luogu_ck_uid: Optional[str] = None
+    luogu_cookie_kv: Optional[str] = None
+    nowcoder_uid: Optional[str] = None
+    nowcoder_cookie_kv: Optional[str] = None
+    atcoder_username: Optional[str] = None
     sync_interval_minutes: int = 0
 
 
@@ -29,15 +31,15 @@ class ProblemDetail(BaseModel):
     problem_id: str
     problem_name: str
     oj_source: str
-    difficulty: str | None = None
+    difficulty: Optional[str] = None
     status: str
-    submit_time: str | None = None
+    submit_time: Optional[str] = None
 
 
 class HeatmapDay(BaseModel):
     date: str
     ac_count: int
-    problems: list[ProblemDetail]
+    problems: List[ProblemDetail]
 
 
 class WeeklyStats(BaseModel):
@@ -55,8 +57,8 @@ class TagStat(BaseModel):
 
 class WeeklyReport(BaseModel):
     summary: str
-    highlights: list[str]
-    weaknesses: list[str]
+    highlights: List[str]
+    weaknesses: List[str]
     suggestion: str
 
 
@@ -66,9 +68,9 @@ class SyncRunItem(BaseModel):
     mode: str
     status: str
     started_at: str
-    finished_at: str | None = None
+    finished_at: Optional[str] = None
     fetched_count: int
     inserted_count: int
     skipped_count: int
-    failed_sources: list[str]
-    detail: dict
+    failed_sources: List[str]
+    detail: Dict[str, Any]

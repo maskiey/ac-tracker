@@ -68,7 +68,11 @@ pip install -r requirements-desktop.txt
 python run_desktop.py
 ```
 
-配置与数据库默认在用户目录 `~/.acm-tracker/`。使用 **PyInstaller** 生成 Windows / macOS 安装目录或 `.app` 的步骤见 [packaging/README.md](packaging/README.md)。
+配置与数据库默认在用户目录 `~/.acm-tracker/`。
+
+- **预编译安装包**：推送到 GitHub 后，在 **Actions** 中运行 workflow **Build desktop packages**，在运行结果页 **Artifacts** 下载 macOS（`.app` zip）与 Windows（`AC-Tracker-windows.zip`）。
+- **本地打包**：见 [packaging/README.md](packaging/README.md)。
+- **无 Python 环境能否运行**：可以，安装包内已带运行时；例外与系统组件见 [packaging/END_USER_REQUIREMENTS.md](packaging/END_USER_REQUIREMENTS.md)。
 
 ## 主要 HTTP 路由
 

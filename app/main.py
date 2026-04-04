@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import threading
 from pathlib import Path
+from typing import Dict, Optional
 
 from dotenv import dotenv_values, load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, Query
@@ -54,7 +55,7 @@ def _env_path() -> Path:
 ENV_PATH = _env_path()
 load_dotenv(ENV_PATH)
 
-app = FastAPI(title="AC Tracker", version="1.0.0")
+app = FastAPI(title="AC Tracker · 刷题轨迹", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -64,11 +65,11 @@ app.add_middleware(
 )
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
-poller_thread: threading.Thread | None = None
+poller_thread: Optional[threading.Thread] = None
 poller_stop_event = threading.Event()
 
 
-def load_runtime_config() -> dict[str, str]:
+def load_runtime_config() -> Dict[str, str]:
     values = dotenv_values(ENV_PATH)
     return {str(key): str(value) for key, value in values.items() if value is not None}
 
@@ -135,7 +136,7 @@ def public_config() -> dict:
     }
 
 
-def sync_once(source: str | None = None, force_full: bool = False) -> dict:
+def sync_once(source: Optional[str] = None, force_full: bool = False) -> dict:
     db = SessionLocal()
     try:
         fetcher = OJFetcher(db, FetcherConfig.from_env())
@@ -257,7 +258,7 @@ def sync_repair_stuck(db: Session = Depends(get_db)):
 
 
 @app.get("/api/heatmap")
-def heatmap(year: int = Query(default=None), db: Session = Depends(get_db)):
+def heatmap(year: Optional[int] = Query(default=None), db: Session = Depends(get_db)):
     selected_year = year or int(os.getenv("DEFAULT_HEATMAP_YEAR", "0") or 0)
     if not selected_year:
         from datetime import datetime
@@ -282,7 +283,7 @@ def period_stats(period: str = Query(default="week"), db: Session = Depends(get_
 
 
 @app.get("/api/stats/tags")
-def tag_stats(oj: str | None = Query(default=None), db: Session = Depends(get_db)):
+def tag_stats(oj: Optional[str] = Query(default=None), db: Session = Depends(get_db)):
     return {"success": True, "data": get_tag_distribution(db, oj_source=oj)}
 
 
@@ -290,14 +291,14 @@ def tag_stats(oj: str | None = Query(default=None), db: Session = Depends(get_db
 def tag_options(
     q: str = Query(default=""),
     limit: int = Query(default=200, ge=1, le=500),
-    oj: str | None = Query(default=None),
+    oj: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
 ):
     return {"success": True, "data": list_existing_tags(db, query=q, limit=limit, oj_source=oj)}
 
 
 @app.get("/api/problems/by-tag")
-def problems_by_tag(tag: str = Query(...), oj: str | None = Query(default=None), db: Session = Depends(get_db)):
+def problems_by_tag(tag: str = Query(...), oj: Optional[str] = Query(default=None), db: Session = Depends(get_db)):
     return {"success": True, "data": list_tag_problems(db, tag, oj_source=oj)}
 
 
@@ -307,7 +308,7 @@ def problems_by_date(date: str = Query(...), db: Session = Depends(get_db)):
 
 
 @app.get("/api/problems/unsolved")
-def unsolved_problems(oj: str | None = Query(default=None), db: Session = Depends(get_db)):
+def unsolved_problems(oj: Optional[str] = Query(default=None), db: Session = Depends(get_db)):
     return {"success": True, "data": list_unsolved_problems(db, oj_source=oj)}
 
 
@@ -347,7 +348,11 @@ def sync_runs(limit: int = Query(default=10, ge=1, le=50), db: Session = Depends
 
 
 @app.get("/api/debug/luogu")
-def debug_luogu(uid: str | None = Query(default=None), username: str | None = Query(default=None), db: Session = Depends(get_db)):
+def debug_luogu(
+    uid: Optional[str] = Query(default=None),
+    username: Optional[str] = Query(default=None),
+    db: Session = Depends(get_db),
+):
     fetcher = OJFetcher(db, FetcherConfig.from_env())
     resolved_uid = fetcher._resolve_luogu_uid(uid=uid, username=username)
     if not resolved_uid:

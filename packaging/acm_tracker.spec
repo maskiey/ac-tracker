@@ -78,7 +78,7 @@ if sys.platform == "darwin":
     BUNDLE(
         coll,
         name="AC Tracker.app",
-        bundle_identifier="dev.acmtracker.desktop",
+        bundle_identifier="dev.maskiey.acmtracker",
         info_plist={
             "NSHighResolutionCapable": True,
             "CFBundleName": "AC Tracker",
