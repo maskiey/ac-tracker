@@ -55,7 +55,7 @@ def _env_path() -> Path:
 ENV_PATH = _env_path()
 load_dotenv(ENV_PATH)
 
-app = FastAPI(title="AC Tracker · 刷题轨迹", version="1.0.0")
+app = FastAPI(title="AC Tracker · 刷题轨迹", version="1.0.2")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
