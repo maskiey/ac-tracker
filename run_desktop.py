@@ -20,9 +20,29 @@ def _is_frozen() -> bool:
 
 
 def _project_root() -> Path:
+    """PyInstaller onedir：资源在 exe 同级的 _internal；_MEIPASS 指向该目录。"""
     if _is_frozen():
-        return Path(getattr(sys, "_MEIPASS", Path.cwd()))
+        mp = getattr(sys, "_MEIPASS", None)
+        if mp:
+            return Path(mp)
+        exe_dir = Path(sys.executable).resolve().parent
+        internal = exe_dir / "_internal"
+        return internal if internal.is_dir() else exe_dir
     return Path(__file__).resolve().parent
+
+
+def _log_file() -> Path:
+    return Path.home() / ".acm-tracker" / "ac-tracker.log"
+
+
+def _append_log(msg: str) -> None:
+    try:
+        p = _log_file()
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with p.open("a", encoding="utf-8") as f:
+            f.write(msg + "\n")
+    except Exception:
+        pass
 
 
 def _prepare_user_paths() -> None:
@@ -99,6 +119,9 @@ def main() -> None:
     os.chdir(root)
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
+    # 无控制台时 stderr 不可见，启动失败请查看 %USERPROFILE%\.acm-tracker\ac-tracker.log
+    if _is_frozen():
+        _append_log("---\n启动: cwd=" + str(Path.cwd()) + " root=" + str(root) + " exe=" + sys.executable)
 
     _prepare_user_paths()
 
@@ -107,6 +130,7 @@ def main() -> None:
     except Exception:
         if _is_frozen():
             print("AC Tracker: 无法加载内置后端。请重新下载安装包或向开发者反馈下列错误：", file=sys.stderr)
+            _append_log("导入 app.main 失败:\n" + traceback.format_exc())
         else:
             print("AC Tracker: 无法加载后端应用（app.main），请在项目根目录运行并执行 pip install -r requirements.txt：", file=sys.stderr)
         traceback.print_exc()
@@ -150,7 +174,19 @@ def main() -> None:
 
     chosen = port
 
-    import webview
+    # WebView2 用户数据放用户目录，避免从「开始」启动时工作目录异常导致无法创建缓存
+    webview_data = Path.home() / ".acm-tracker" / "webview2"
+    try:
+        webview_data.mkdir(parents=True, exist_ok=True)
+        os.environ.setdefault("WEBVIEW2_USER_DATA_FOLDER", str(webview_data))
+    except Exception:
+        pass
+
+    try:
+        import webview
+    except Exception:
+        _append_log("导入 webview 失败:\n" + traceback.format_exc())
+        raise
 
     # ?app=desktop 供前端加 html.desktop-shell，主滚动落在 body 上，避免 WKWebView 不向内层 overflow 传滚轮
     url = f"http://127.0.0.1:{chosen}/?app=desktop"
@@ -175,11 +211,20 @@ def main() -> None:
     except Exception:
         pass
 
-    webview.start()
+    try:
+        webview.start()
+    except Exception:
+        _append_log("webview.start 失败:\n" + traceback.format_exc())
+        raise
 
 
 if __name__ == "__main__":
     import multiprocessing
 
     multiprocessing.freeze_support()
-    main()
+    try:
+        main()
+    except Exception:
+        if _is_frozen():
+            _append_log("未捕获异常:\n" + traceback.format_exc())
+        raise

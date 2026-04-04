@@ -17,6 +17,7 @@
   - Windows 11 及部分已装新版 Edge 的环境通常**已自带**。  
   - 若启动后窗口空白或报错，请安装：[WebView2 运行时](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)（Evergreen 安装包即可）。
 - **安装程序**（`AC-Tracker-Windows-Setup.exe`）默认安装到**当前用户**目录（`%LOCALAPPDATA%\Programs\AC Tracker`），无需管理员权限；若 SmartScreen 提示「未知发布者」，属未签名软件常见情况，可按提示「仍要运行」或自行在「Windows 安全中心」中放行。
+- 若安装后双击无反应或瞬间退出：请到 **`%USERPROFILE%\.acm-tracker\ac-tracker.log`** 查看启动日志（桌面版会将错误写入该文件）；并确认已安装 [WebView2 运行时](https://developer.microsoft.com/microsoft-edge/webview2/)。
 - 一般无需单独安装 **.NET**，当前 pywebview 的 WebView2 后端不额外要求用户手动装 .NET SDK。
 
 ### macOS
