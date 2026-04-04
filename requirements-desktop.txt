@@ -1,3 +1,4 @@
 -r requirements.txt
-pywebview>=4.4
-pyinstaller>=6.0
+# 固定大版本，避免 CI 上解析到不兼容的预发布 / yanked 包
+pywebview>=4.4,<6
+pyinstaller>=6.10,<7

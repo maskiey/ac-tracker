@@ -9,13 +9,16 @@ on:
 permissions:
   contents: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -24,8 +27,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-desktop.txt
 
+      - name: Verify imports
+        run: python -c "import webview; import run_desktop; import app.main"
+
       - name: PyInstaller (macOS)
-        run: python -m PyInstaller packaging/acm_tracker.spec --noconfirm
+        run: python -m PyInstaller packaging/acm_tracker.spec --noconfirm --clean
+
+      - name: List dist (debug)
+        if: success() || failure()
+        run: |
+          ls -la dist || true
+          ls -la "dist/AC Tracker.app" 2>/dev/null || true
 
       - name: Zip artifacts
         run: |
@@ -33,7 +45,7 @@ jobs:
           zip -ry ../AC-Tracker-macos-app.zip "AC Tracker.app"
           zip -ry ../AC-Tracker-macos-folder.zip AC-Tracker
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: acm-tracker-macos
           path: |
@@ -44,9 +56,9 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -55,15 +67,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-desktop.txt
 
+      - name: Verify imports
+        run: python -c "import webview; import run_desktop; import app.main"
+
       - name: PyInstaller (Windows)
-        run: python -m PyInstaller packaging/acm_tracker.spec --noconfirm
+        run: python -m PyInstaller packaging/acm_tracker.spec --noconfirm --clean
+
+      - name: List dist (debug)
+        if: success() || failure()
+        shell: pwsh
+        run: |
+          if (Test-Path dist) { Get-ChildItem -Path dist -Recurse -Depth 3 | ForEach-Object { $_.FullName } }
 
       - name: Zip folder
         shell: pwsh
         run: |
+          if (-not (Test-Path "dist\AC-Tracker\AC-Tracker.exe")) { throw "dist\AC-Tracker\AC-Tracker.exe missing" }
           Compress-Archive -Path "dist\AC-Tracker" -DestinationPath "AC-Tracker-windows.zip" -Force
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: acm-tracker-windows
           path: AC-Tracker-windows.zip
@@ -72,15 +94,17 @@ jobs:
   release:
     needs: [build-macos, build-windows]
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Download macOS artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: acm-tracker-macos
           path: artifacts/macos
 
       - name: Download Windows artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: acm-tracker-windows
           path: artifacts/windows

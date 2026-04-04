@@ -4,6 +4,9 @@
 import sys
 from pathlib import Path
 
+# Analysis 阶段遍历 FastAPI/SQLAlchemy 等依赖时，默认递归深度可能不够导致构建失败
+sys.setrecursionlimit(max(sys.getrecursionlimit(), 10_000))
+
 from PyInstaller.utils.hooks import collect_all
 
 # PyInstaller 提供 SPECPATH = 本 spec 所在目录
