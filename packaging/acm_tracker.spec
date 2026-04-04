@@ -12,7 +12,8 @@ from PyInstaller.utils.hooks import collect_all
 # PyInstaller 提供 SPECPATH = 本 spec 所在目录
 ROOT = Path(SPECPATH).parent.resolve()  # noqa: F821
 
-datas = [("app", "app")]
+# 必须用项目根下的绝对路径；相对路径会相对 .spec 所在目录，误变成 packaging/app
+datas = [(str(ROOT / "app"), "app")]
 binaries = []
 hiddenimports: list[str] = []
 
@@ -27,6 +28,7 @@ for pkg in (
     "requests",
     "bs4",
     "webview",
+    "tzdata",
 ):
     try:
         d, b, h = collect_all(pkg)
