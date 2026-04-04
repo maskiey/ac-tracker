@@ -9,11 +9,12 @@ function readThemePreference() {
       if (old === "dark") pref = "dark";
       else if (old === "light") pref = "light";
       else if (old) pref = "light";
+      else pref = "system";
     }
-    if (pref !== "light" && pref !== "dark" && pref !== "system") pref = "light";
+    if (pref !== "light" && pref !== "dark" && pref !== "system") pref = "system";
     return pref;
   } catch (e) {
-    return "light";
+    return "system";
   }
 }
 
@@ -137,7 +138,7 @@ function applyTheme(themePreference, refreshCharts = true) {
   const pref =
     themePreference === "dark" || themePreference === "light" || themePreference === "system"
       ? themePreference
-      : "light";
+      : "system";
   const resolved = resolveThemePreference(pref);
   document.documentElement.setAttribute("data-theme", resolved);
   try {

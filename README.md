@@ -70,7 +70,7 @@ python run_desktop.py
 
 配置与数据库默认在用户目录 `~/.acm-tracker/`。
 
-- **预编译安装包**：推送到 GitHub 后，在 **Actions** 中运行 workflow **Build desktop packages**，在运行结果页 **Artifacts** 下载 macOS（`.app` zip）与 Windows（`AC-Tracker-windows.zip`）。
+- **预编译安装包**：在 **Actions** 中运行 **Build desktop packages**，于 **Artifacts** 下载：macOS 含 **`.dmg`** 与 `.app` zip；Windows 含 **`AC-Tracker-Windows-Setup.exe`**（安装包）与 **`AC-Tracker-windows-portable.zip`**（便携版）。详见 [packaging/README.md](packaging/README.md)。
 - **本地打包**：见 [packaging/README.md](packaging/README.md)。
 - **无 Python 环境能否运行**：可以，安装包内已带运行时；例外与系统组件见 [packaging/END_USER_REQUIREMENTS.md](packaging/END_USER_REQUIREMENTS.md)。
 

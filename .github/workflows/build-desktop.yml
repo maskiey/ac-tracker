@@ -1,4 +1,4 @@
-# 在 GitHub Actions 中构建 macOS .app 与 Windows 可执行目录，产物在 Actions Artifacts 中下载
+# 在 GitHub Actions 中构建 macOS（.zip + .dmg）与 Windows（便携 zip + Inno Setup）
 name: Build desktop packages
 
 on:
@@ -8,11 +8,10 @@ on:
     paths:
       - "app/**"
       - "run_desktop.py"
-      - "packaging/acm_tracker.spec"
+      - "packaging/**"
       - "requirements*.txt"
       - ".github/workflows/build-desktop.yml"
 
-# 使用 Node 24 运行 actions，避免 Node 20 弃用告警
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -43,6 +42,9 @@ jobs:
           ls -la dist || true
           ls -la "dist/AC Tracker.app" 2>/dev/null || true
 
+      - name: Create DMG
+        run: bash packaging/build_dmg.sh
+
       - name: Zip artifacts
         run: |
           cd dist
@@ -53,6 +55,7 @@ jobs:
         with:
           name: acm-tracker-macos
           path: |
+            AC-Tracker-macos.dmg
             AC-Tracker-macos-app.zip
             AC-Tracker-macos-folder.zip
           if-no-files-found: error
@@ -83,14 +86,29 @@ jobs:
         run: |
           if (Test-Path dist) { Get-ChildItem -Path dist -Recurse -Depth 3 | ForEach-Object { $_.FullName } }
 
-      - name: Zip folder
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build installer (Inno Setup)
+        shell: pwsh
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "ISCC not found: $iscc" }
+          $m = Select-String -Path app/main.py -Pattern 'version="([^"]+)"'
+          $ver = $m.Matches.Groups[1].Value
+          & $iscc /DMyAppVersion=$ver packaging\AC-Tracker.iss
+          if (-not (Test-Path "AC-Tracker-Windows-Setup.exe")) { throw "AC-Tracker-Windows-Setup.exe missing" }
+
+      - name: Zip portable folder
         shell: pwsh
         run: |
           if (-not (Test-Path "dist\AC-Tracker\AC-Tracker.exe")) { throw "dist\AC-Tracker\AC-Tracker.exe missing" }
-          Compress-Archive -Path "dist\AC-Tracker" -DestinationPath "AC-Tracker-windows.zip" -Force
+          Compress-Archive -Path "dist\AC-Tracker" -DestinationPath "AC-Tracker-windows-portable.zip" -Force
 
       - uses: actions/upload-artifact@v6
         with:
           name: acm-tracker-windows
-          path: AC-Tracker-windows.zip
+          path: |
+            AC-Tracker-windows-portable.zip
+            AC-Tracker-Windows-Setup.exe
           if-no-files-found: error

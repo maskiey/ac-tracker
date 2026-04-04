@@ -1,4 +1,4 @@
-const CACHE_NAME = "ac-tracker-v22";
+const CACHE_NAME = "ac-tracker-v23";
 const ASSETS = ["/", "/static/app.js", "/static/themes.css", "/static/icon.svg", "/static/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {

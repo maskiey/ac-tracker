@@ -16,8 +16,9 @@
           if (o === "dark") pref = "dark";
           else if (o === "light") pref = "light";
           else if (o) pref = "light";
+          else pref = "system";
         }
-        if (pref !== "light" && pref !== "dark" && pref !== "system") pref = "light";
+        if (pref !== "light" && pref !== "dark" && pref !== "system") pref = "system";
         var resolved = pref;
         if (pref === "system") {
           resolved = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
@@ -33,6 +34,7 @@
   <meta name="theme-color" content="#1d4ed8" id="meta-theme-color" />
   <link rel="manifest" href="/static/manifest.webmanifest" />
   <link rel="icon" href="/static/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/static/icon.svg" />
   <link rel="stylesheet" href="/static/themes.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 </head>
@@ -184,9 +186,9 @@
             <div class="settings-row">
               <label class="theme-picker-inline" for="theme-select">主题</label>
               <select id="theme-select" class="theme-select" aria-label="主题">
+                <option value="system">跟随系统</option>
                 <option value="light">浅色</option>
                 <option value="dark">深色</option>
-                <option value="system">跟随系统</option>
               </select>
             </div>
           </section>
