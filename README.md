@@ -1,5 +1,7 @@
 # AC Tracker
 
+维护者：[@maskiey](https://github.com/maskiey)
+
 自托管的刷题记录可视化：用 FastAPI + SQLite 汇总多平台提交，展示年度 AC 热力图、周期统计、知识点分布与规则化周报文案。前端使用原生 JS 与 [Apache ECharts](https://echarts.apache.org/)（通过 [jsDelivr](https://www.jsdelivr.com/) CDN 加载）。
 
 ## 法律与第三方说明
