@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <script>
+    (function () {
+      try {
+        var prefKey = "acm-tracker-theme-preference";
+        var legacyKey = "acm-tracker-theme";
+        var pref = localStorage.getItem(prefKey);
+        if (!pref) {
+          var o = localStorage.getItem(legacyKey);
+          if (o === "dark") pref = "dark";
+          else if (o === "light") pref = "light";
+          else if (o) pref = "light";
+        }
+        if (pref !== "light" && pref !== "dark" && pref !== "system") pref = "light";
+        var resolved = pref;
+        if (pref === "system") {
+          resolved = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+        document.documentElement.setAttribute("data-theme", resolved);
+      } catch (e) {}
+    })();
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>AC Tracker</title>
+  <meta name="theme-color" content="#1d4ed8" id="meta-theme-color" />
+  <link rel="manifest" href="/static/manifest.webmanifest" />
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/static/themes.css" />
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+</head>
+<body data-default-view="{{ default_view or 'overview' }}">
+  <div class="app-root" id="app-root">
+    <header class="app-topbar" role="banner">
+      <div class="app-topbar-inner">
+        <span class="app-topbar-brand">AC Tracker</span>
+        <span class="app-topbar-tagline">刷题轨迹</span>
+      </div>
+    </header>
+
+    <main class="app-main" id="app-main">
+      <div class="shell shell-app">
+        <div class="view-stack">
+        <section class="view-panel {% if (default_view or 'overview') == 'overview' %}active{% endif %}" data-view="overview">
+          <p class="app-lead">在下方热力图中查看年度 AC；「设置」中可同步账号与外观。</p>
+          <section class="grid heatmap-home" id="heatmap-section">
+            <div class="card">
+              <div class="section-head">
+                <h2>贡献热力图</h2>
+                <div class="toolbar compact">
+                  <button id="prev-year-button" class="chip" type="button">上一年</button>
+                  <label class="year-field">
+                    <span class="year-field-label">年份</span>
+                    <input id="year-input" type="number" min="2020" max="2099" value="{{ default_year or '' }}" placeholder="年" />
+                  </label>
+                  <button id="next-year-button" class="chip" type="button">下一年</button>
+                </div>
+              </div>
+              <div id="heatmap" class="contrib-graph" aria-label="年度 AC 贡献图"></div>
+            </div>
+
+            <div class="card">
+              <h2>当天 AC 题目</h2>
+              <div class="meta" id="selected-date">点击热力图中的日期方块查看详细题目。</div>
+              <ul class="problems" id="problem-list"></ul>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>全局概览</h2>
+            <div class="summary-grid four">
+              <div class="metric">
+                <div class="label">总提交数</div>
+                <div class="value" id="total-submissions">0</div>
+              </div>
+              <div class="metric">
+                <div class="label">总 AC 数</div>
+                <div class="value" id="total-ac">0</div>
+              </div>
+              <div class="metric">
+                <div class="label">活跃天数</div>
+                <div class="value" id="active-days">0</div>
+              </div>
+              <div class="metric">
+                <div class="label">最近同步</div>
+                <div class="value" id="last-sync">-</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="grid">
+            <div class="card">
+              <div class="section-head">
+                <h2>统计</h2>
+                <div class="toolbar compact">
+                  <button type="button" class="chip active" data-period="day">本日</button>
+                  <button type="button" class="chip" data-period="week">本周</button>
+                  <button type="button" class="chip" data-period="month">本月</button>
+                  <button type="button" class="chip" data-period="year">本年</button>
+                </div>
+              </div>
+              <div class="metrics">
+                <div class="metric">
+                  <div class="label">AC 数量</div>
+                  <div class="value" id="weekly-ac">0</div>
+                </div>
+                <div class="metric">
+                  <div class="label">尝试次数</div>
+                  <div class="value" id="weekly-attempt">0</div>
+                </div>
+                <div class="metric">
+                  <div class="label">正确率</div>
+                  <div class="value" id="weekly-accuracy">0%</div>
+                </div>
+              </div>
+              <div class="footer-note" id="weekly-range"></div>
+            </div>
+
+            <div class="card">
+              <h2>周报文案</h2>
+              <div class="report" id="report-content">正在等待数据分析。</div>
+            </div>
+          </section>
+        </section>
+
+        <section class="view-panel {% if (default_view or 'overview') == 'knowledge' %}active{% endif %}" data-view="knowledge">
+          <section class="card">
+            <div class="section-head">
+              <h2>知识点分布</h2>
+              <div class="toolbar compact">
+                <select id="knowledge-oj-filter" class="oj-filter-select" aria-label="按网站筛选知识点统计">
+                  <option value="">全部网站</option>
+                  <option value="codeforces">Codeforces</option>
+                  <option value="luogu">洛谷</option>
+                  <option value="nowcoder">牛客</option>
+                  <option value="qoj">QOJ</option>
+                  <option value="atcoder">AtCoder</option>
+                </select>
+              </div>
+            </div>
+            <div class="footer-note">点击柱状图或饼图中的任一知识点，都可以查看该知识点下的题目列表；上方可按网站筛选统计范围。</div>
+            <div class="chart-duo">
+              <div id="tags-chart"></div>
+              <div id="tags-pie-chart"></div>
+            </div>
+            <div class="sub-panel">
+              <h2 id="tag-problems-title">知识点相关题目</h2>
+              <div class="meta" id="tag-selected">点击柱状图中的知识点查看对应题目。</div>
+              <ul class="problems" id="tag-problem-list"></ul>
+            </div>
+          </section>
+        </section>
+
+        <section class="view-panel {% if (default_view or 'overview') == 'problems' %}active{% endif %}" data-view="problems">
+          <section class="card">
+            <div class="section-head">
+              <h2>补题</h2>
+              <div class="toolbar compact">
+                <select id="problems-oj-filter" class="oj-filter-select" aria-label="按网站筛选补题列表">
+                  <option value="">全部网站</option>
+                  <option value="codeforces">Codeforces</option>
+                  <option value="luogu">洛谷</option>
+                  <option value="nowcoder">牛客</option>
+                  <option value="qoj">QOJ</option>
+                  <option value="atcoder">AtCoder</option>
+                </select>
+              </div>
+            </div>
+            <div class="meta" id="unsolved-summary">展示已经尝试但还没有 AC 的题目（可按网站筛选）。</div>
+            <ul class="problems" id="unsolved-list"></ul>
+          </section>
+        </section>
+
+        <section class="view-panel {% if (default_view or 'overview') in ('settings', 'sync') %}active{% endif %}" data-view="settings">
+          <section class="card settings-section">
+            <h2>外观</h2>
+            <div class="settings-row">
+              <label class="theme-picker-inline" for="theme-select">主题</label>
+              <select id="theme-select" class="theme-select" aria-label="主题">
+                <option value="light">浅色</option>
+                <option value="dark">深色</option>
+                <option value="system">跟随系统</option>
+              </select>
+            </div>
+          </section>
+
+          <section class="card settings-section">
+            <h2>同步</h2>
+            <div class="toolbar settings-sync-toolbar">
+              <button id="sync-button" type="button">立即同步</button>
+              <button id="force-sync-button" type="button" class="muted-button">全量同步</button>
+              <button type="button" id="cancel-sync-button" class="muted-button" hidden>取消等待</button>
+              <button type="button" id="repair-sync-button" class="muted-button">清除卡住</button>
+              <button type="button" id="install-button" class="muted-button" hidden>安装到桌面</button>
+            </div>
+            <div class="settings-row">
+              <label for="source-select">来源</label>
+              <select id="source-select">
+                <option value="">全部来源</option>
+                <option value="codeforces">Codeforces</option>
+                <option value="luogu">洛谷</option>
+                <option value="nowcoder">牛客</option>
+                <option value="atcoder">AtCoder</option>
+              </select>
+            </div>
+            <div class="toolbar secondary">
+              <span class="badge" id="config-badge">尚未读取配置</span>
+              <span class="badge warn" id="sync-badge">同步未开始</span>
+            </div>
+            <p class="settings-status" id="sync-status">准备就绪，等待首次同步。</p>
+          </section>
+
+          <section class="card settings-section">
+            <h2>账号与连接</h2>
+            <p class="sync-settings-intro">按平台分别填写；Cookie 均为分项（只填值或多行 <code>name=value</code>），保存时合成请求头。</p>
+
+            <div class="sync-source-block">
+              <h3>Codeforces</h3>
+              <div class="settings-grid">
+                <div class="field">
+                  <label for="cf-handle">Handle</label>
+                  <input id="cf-handle" type="text" placeholder="tourist" autocomplete="username" />
+                </div>
+                <div class="field span-2">
+                  <label for="cf-cookie-kv">Cookie（可选，每行 <code>name=value</code>）</label>
+                  <textarea id="cf-cookie-kv" rows="2" placeholder="例如从开发者工具逐键复制"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="sync-source-block">
+              <h3>洛谷</h3>
+              <div class="footer-note">
+                同步所需 Cookie：<strong>__client_id</strong> 与 <strong>_uid</strong> 只填值；其它键写在最下方（每行 <code>name=value</code>）。
+              </div>
+              <div class="settings-grid">
+                <div class="field">
+                  <label for="luogu-uid">账号 UID（配置用）</label>
+                  <input id="luogu-uid" type="text" placeholder="数字 UID" />
+                </div>
+                <div class="field">
+                  <label for="luogu-username">用户名（配置用）</label>
+                  <input id="luogu-username" type="text" placeholder="可与 UID 二选一" />
+                </div>
+                <div class="field">
+                  <label for="luogu-ck-client-id"><code>__client_id</code>（只填值）</label>
+                  <input id="luogu-ck-client-id" type="text" autocomplete="off" />
+                </div>
+                <div class="field">
+                  <label for="luogu-ck-uid"><code>_uid</code>（Cookie 里的，只填值）</label>
+                  <input id="luogu-ck-uid" type="text" autocomplete="off" />
+                </div>
+                <div class="field span-2">
+                  <label for="luogu-cookie-kv">其它 Cookie（可选，每行 <code>name=value</code>）</label>
+                  <textarea id="luogu-cookie-kv" rows="2" placeholder="例如 C3VK=… 或其它键"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="sync-source-block">
+              <h3>AtCoder</h3>
+              <div class="footer-note">
+                填写与 <code>atcoder.jp/users/&lt;id&gt;</code> 一致的<strong>用户 ID</strong>（区分大小写）。题目与提交数据来自公开索引（kenkoooo），无需 Cookie。
+              </div>
+              <div class="settings-grid">
+                <div class="field">
+                  <label for="atcoder-username">用户 ID（必填）</label>
+                  <input id="atcoder-username" type="text" placeholder="例如 tourist" autocomplete="username" />
+                </div>
+              </div>
+            </div>
+
+            <div class="sync-source-block">
+              <h3>牛客 ACM</h3>
+              <div class="settings-grid">
+                <div class="field">
+                  <label for="nowcoder-uid">竞赛 UID</label>
+                  <input id="nowcoder-uid" type="text" placeholder="个人主页数字 ID" />
+                </div>
+                <div class="field span-2">
+                  <label for="nowcoder-cookie-kv">Cookie（可选，每行 <code>name=value</code>）</label>
+                  <textarea id="nowcoder-cookie-kv" rows="2" placeholder="一般可不填；受限时从浏览器逐键填写"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="sync-source-block">
+              <h3>通用</h3>
+              <div class="settings-grid">
+                <div class="field">
+                  <label for="sync-interval">自动轮询间隔（分钟）</label>
+                  <input id="sync-interval" type="number" min="0" max="1440" placeholder="0 表示关闭后台轮询" />
+                </div>
+              </div>
+            </div>
+
+            <div class="toolbar secondary">
+              <button id="save-config-button" type="button">保存设置</button>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>同步历史</h2>
+            <div class="sync-table-wrap">
+              <table class="sync-table">
+                <thead>
+                  <tr>
+                    <th>时间</th>
+                    <th>来源</th>
+                    <th>模式</th>
+                    <th>结果</th>
+                    <th>明细</th>
+                  </tr>
+                </thead>
+                <tbody id="sync-runs-body">
+                  <tr>
+                    <td colspan="5" class="meta">还没有同步记录。</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+        </div>
+      </div>
+    </main>
+
+    <nav class="app-tabbar" aria-label="主导航">
+      <a class="tab-item {% if (default_view or 'overview') == 'overview' %}active{% endif %}" href="/" data-nav-view="overview">
+        <span class="tab-icon" aria-hidden="true">◎</span>
+        <span class="tab-label">总览</span>
+      </a>
+      <a class="tab-item {% if (default_view or 'overview') == 'knowledge' %}active{% endif %}" href="/knowledge" data-nav-view="knowledge">
+        <span class="tab-icon" aria-hidden="true">▦</span>
+        <span class="tab-label">知识点</span>
+      </a>
+      <a class="tab-item {% if (default_view or 'overview') == 'problems' %}active{% endif %}" href="/problems" data-nav-view="problems">
+        <span class="tab-icon" aria-hidden="true">≡</span>
+        <span class="tab-label">补题</span>
+      </a>
+      <a class="tab-item {% if (default_view or 'overview') in ('settings', 'sync') %}active{% endif %}" href="/settings" data-nav-view="settings">
+        <span class="tab-icon" aria-hidden="true">⚙</span>
+        <span class="tab-label">设置</span>
+      </a>
+    </nav>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

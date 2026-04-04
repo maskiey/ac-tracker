@@ -1,0 +1,16 @@
+{
+  "name": "AC Tracker · 刷题轨迹可视化",
+  "short_name": "AC Tracker",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f1f5f9",
+  "theme_color": "#1d4ed8",
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
