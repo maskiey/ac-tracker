@@ -39,7 +39,7 @@ def build_rgba_icon() -> Image.Image:
 
 def main() -> None:
     if not SRC.is_file():
-        print("缺少图标源文件：packaging/icon_source.png 或", OUT_PNG, file=sys.stderr)
+        print("Missing icon source: packaging/icon_source.png or", OUT_PNG, file=sys.stderr)
         sys.exit(1)
     ICO.parent.mkdir(parents=True, exist_ok=True)
     im = build_rgba_icon()
@@ -47,14 +47,15 @@ def main() -> None:
         im.save(OUT_PNG, "PNG")
         print("Wrote", OUT_PNG)
     else:
-        print("使用已有", OUT_PNG, "生成 .ico/.icns")
+        print("Using existing", OUT_PNG, "to build .ico/.icns")
     sizes = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
     imgs = [im.resize(sz, Image.Resampling.LANCZOS) for sz in sizes]
     imgs[0].save(ICO, format="ICO", sizes=[(i.width, i.height) for i in imgs], append_images=imgs[1:])
     print("Wrote", ICO)
 
     if sys.platform != "darwin":
-        print("非 macOS：跳过 app.icns（请在 Mac 上执行或提交已生成的 packaging/icons/app.icns）")
+        # Windows CI uses cp1252; avoid non-ASCII in print() (UnicodeEncodeError).
+        print("Not macOS: skipping app.icns (build on macOS or commit packaging/icons/app.icns)")
         return
 
     if shutil.which("sips") and shutil.which("iconutil"):
@@ -71,7 +72,7 @@ def main() -> None:
         print("Wrote", ICNS)
         shutil.rmtree(ICONSET)
     else:
-        print("未找到 sips/iconutil", file=sys.stderr)
+        print("sips/iconutil not found", file=sys.stderr)
         sys.exit(1)
 
 
