@@ -19,6 +19,18 @@ def _is_frozen() -> bool:
     return getattr(sys, "frozen", False) is True
 
 
+def _ensure_stdio_not_none() -> None:
+    """无控制台打包（console=False）或多进程子进程里，stdout/stderr 可能为 None。
+
+    uvicorn 配置 logging 时会访问 sys.stdout.isatty()，若为 None 则报错：
+    AttributeError: 'NoneType' object has no attribute 'isatty'
+    """
+    if sys.stdout is None:
+        sys.stdout = open(os.devnull, "w", encoding="utf-8")
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, "w", encoding="utf-8")
+
+
 def _configure_pythonnet_for_frozen_windows() -> None:
     """PyInstaller + pywebview：WinForms 后端通过 pythonnet 加载 CLR，须指向内嵌 python3xx.dll。
 
@@ -127,6 +139,8 @@ def _first_free_port(host: str, start: int, count: int = 20) -> int | None:
 def _serve(port: int, fatal: list[BaseException]) -> None:
     """非 Windows：在守护线程中启动 uvicorn（单进程）。"""
     try:
+        if _is_frozen():
+            _ensure_stdio_not_none()
         if sys.platform == "win32":
             import asyncio
 
@@ -150,6 +164,7 @@ def _uvicorn_child_main(port: int) -> None:
     CPython 在 Windows 上默认使用 ProactorEventLoop；在子线程里跑 uvicorn 时易出现无法监听、
     或长时间无法就绪，界面即报「本地服务启动失败」。独立进程可避免该问题。
     """
+    _ensure_stdio_not_none()
     root = _project_root()
     os.chdir(root)
     if str(root) not in sys.path:
@@ -183,6 +198,8 @@ APP_WINDOW_TITLE = "AC Tracker · 刷题轨迹"
 
 
 def main() -> None:
+    if _is_frozen():
+        _ensure_stdio_not_none()
     root = _project_root()
     os.chdir(root)
     if str(root) not in sys.path:
