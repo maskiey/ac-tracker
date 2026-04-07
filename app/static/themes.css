@@ -265,8 +265,9 @@ body {
 
 .app-topbar-inner {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
 }
 
 .app-topbar-brand {
@@ -278,6 +279,231 @@ body {
 .app-topbar-tagline {
   font-size: 13px;
   color: var(--muted);
+}
+
+.app-topbar-spacer {
+  flex: 1 1 auto;
+  min-width: 8px;
+}
+
+.topbar-text-btn {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--link, #2563eb);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.topbar-text-btn:hover {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+html[data-theme="dark"] .topbar-text-btn {
+  color: #7cb3ff;
+}
+
+html[data-theme="dark"] .topbar-text-btn:hover {
+  background: rgba(125, 179, 255, 0.12);
+}
+
+/* 新版本提示条 */
+.update-banner {
+  flex-shrink: 0;
+  z-index: 35;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(90deg, rgba(29, 78, 216, 0.12), rgba(124, 58, 237, 0.1));
+}
+
+html[data-theme="dark"] .update-banner {
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.12), rgba(167, 139, 250, 0.1));
+}
+
+.update-banner-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  max-width: min(960px, 100%);
+  margin: 0 auto;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.update-banner-icon {
+  font-size: 16px;
+  opacity: 0.85;
+}
+
+.update-banner-message {
+  flex: 1 1 200px;
+  color: var(--text);
+}
+
+.update-banner-link {
+  font-weight: 600;
+  color: var(--link, #1d4ed8);
+  text-decoration: none;
+}
+
+.update-banner-link:hover {
+  text-decoration: underline;
+}
+
+.update-banner-dismiss {
+  margin-left: auto;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--card-bg, rgba(255, 255, 255, 0.7));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+html[data-theme="dark"] .update-banner-dismiss {
+  background: rgba(28, 31, 42, 0.85);
+}
+
+/* 关于对话框 */
+.modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  box-sizing: border-box;
+}
+
+.modal-root[hidden] {
+  display: none !important;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+.modal-dialog {
+  position: relative;
+  width: min(420px, 100%);
+  max-height: min(88vh, 640px);
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--card-bg, var(--app-chrome-bg));
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.22);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.modal-close {
+  margin: 0;
+  padding: 4px 10px;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--text);
+}
+
+.modal-body {
+  padding: 16px 18px 18px;
+}
+
+.about-lead {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.about-version-line {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.about-version-line .muted {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.about-desc {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.about-links {
+  margin: 0 0 16px;
+  padding-left: 1.1em;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.about-links a {
+  color: var(--link, #1d4ed8);
+  word-break: break-all;
+}
+
+.about-subtitle {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.about-thirdparty {
+  margin: 0 0 14px;
+  padding-left: 1.1em;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.about-thirdparty li {
+  margin-bottom: 4px;
+}
+
+.about-legal {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .app-main {

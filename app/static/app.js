@@ -1017,6 +1017,138 @@ if (location.hash === "#heatmap-section" || location.hash === "#heatmap") {
   });
 }
 
+const DISMISS_UPDATE_KEY = "acm-tracker-dismiss-update-for";
+
+function openAboutModal() {
+  const modal = document.getElementById("about-modal");
+  if (!modal) return;
+  modal.hidden = false;
+  modal.setAttribute("aria-hidden", "false");
+  document.getElementById("about-modal-close")?.focus();
+}
+
+function closeAboutModal() {
+  const modal = document.getElementById("about-modal");
+  if (!modal) return;
+  modal.hidden = true;
+  modal.setAttribute("aria-hidden", "true");
+}
+
+document.getElementById("about-open-button")?.addEventListener("click", openAboutModal);
+document.getElementById("about-modal-close")?.addEventListener("click", closeAboutModal);
+document.getElementById("about-modal-backdrop")?.addEventListener("click", closeAboutModal);
+
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    const modal = document.getElementById("about-modal");
+    if (modal && !modal.hidden) closeAboutModal();
+  }
+});
+
+async function loadAboutModal() {
+  try {
+    const res = await fetchJSON("/api/app/about");
+    if (!res.success || !res.data) return;
+    const d = res.data;
+    const nameEl = document.getElementById("about-app-name");
+    const verEl = document.getElementById("about-version-label");
+    const descEl = document.getElementById("about-desc");
+    const linksEl = document.getElementById("about-links");
+    const tpEl = document.getElementById("about-thirdparty");
+    if (nameEl) nameEl.textContent = d.name || "";
+    if (verEl) verEl.textContent = d.version || "";
+    if (descEl) descEl.textContent = d.description || "";
+    if (linksEl) {
+      linksEl.innerHTML = "";
+      const items = [
+        ["GitHub 仓库", d.repo_url],
+        ["发行版 / 下载", d.releases_url],
+        [`开源许可（${d.license || "MIT"}）`, d.license_url],
+      ];
+      for (const [label, href] of items) {
+        if (!href) continue;
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.href = href;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = label;
+        li.appendChild(a);
+        linksEl.appendChild(li);
+      }
+    }
+    if (tpEl && Array.isArray(d.third_party)) {
+      tpEl.innerHTML = "";
+      d.third_party.forEach((row) => {
+        const li = document.createElement("li");
+        li.textContent = row.name + (row.note ? " — " + row.note : "");
+        tpEl.appendChild(li);
+      });
+    }
+  } catch (_) {
+    /* 离线时关于页可稍后再试 */
+  }
+}
+
+function maybeShowUpdateBanner(data) {
+  const banner = document.getElementById("update-banner");
+  const msgEl = document.getElementById("update-banner-message");
+  const linkEl = document.getElementById("update-banner-link");
+  if (!banner || !msgEl || !linkEl || !data) return;
+  if (!data.update_check_enabled) {
+    banner.hidden = true;
+    return;
+  }
+  if (!data.update_available) {
+    banner.hidden = true;
+    return;
+  }
+  const latestRaw = data.latest_version || data.latest_tag || "";
+  if (!latestRaw) {
+    banner.hidden = true;
+    return;
+  }
+  const latestNorm = String(latestRaw).replace(/^v/i, "").trim();
+  banner.dataset.latest = latestNorm;
+  try {
+    if (localStorage.getItem(DISMISS_UPDATE_KEY) === latestNorm) {
+      banner.hidden = true;
+      return;
+    }
+  } catch (_) {
+    /* ignore */
+  }
+  const cur = data.current_version || "";
+  msgEl.textContent = `发现新版本 ${latestNorm}（当前 ${cur}）。建议在发行页获取桌面安装包或便携版。`;
+  linkEl.href = data.release_url || "https://github.com/maskiey/acm-tracker/releases";
+  banner.hidden = false;
+}
+
+document.getElementById("update-banner-dismiss")?.addEventListener("click", () => {
+  const banner = document.getElementById("update-banner");
+  const v = banner && banner.dataset ? banner.dataset.latest : "";
+  if (v) {
+    try {
+      localStorage.setItem(DISMISS_UPDATE_KEY, v);
+    } catch (_) {
+      /* ignore */
+    }
+  }
+  if (banner) banner.hidden = true;
+});
+
+async function checkUpdateBanner() {
+  try {
+    const res = await fetchJSON("/api/app/update-check");
+    maybeShowUpdateBanner(res.data);
+  } catch (_) {
+    /* 离线不打扰 */
+  }
+}
+
+loadAboutModal();
+checkUpdateBanner();
+
 refreshDashboard().catch((error) => {
   syncStatus.textContent = `初始化加载失败：${error.message}`;
 });

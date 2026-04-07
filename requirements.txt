@@ -1,4 +1,5 @@
 beautifulsoup4==4.12.3
+packaging>=24.0
 # Windows 上 zoneinfo 需 IANA 数据；Linux/macOS 亦可使用，保证 CI/桌面版一致
 tzdata>=2024.1
 fastapi==0.115.0

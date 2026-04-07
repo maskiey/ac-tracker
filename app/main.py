@@ -22,9 +22,11 @@ from app.cookie_merge import (
     merge_luogu_cookie,
     parse_cookie_header,
 )
+from app.version import APP_VERSION
 from app.database import SessionLocal, init_db
 from app.fetcher import FetcherConfig, OJFetcher
 from app.schemas import ConfigPayload, SyncRequest
+from app.services.app_meta import get_about_payload, get_update_check_payload
 from app.services.report import generate_weekly_report
 from app.services.stats import (
     get_daily_problem_lookup,
@@ -55,7 +57,7 @@ def _env_path() -> Path:
 ENV_PATH = _env_path()
 load_dotenv(ENV_PATH)
 
-app = FastAPI(title="AC Tracker · 刷题轨迹", version="1.0.11")
+app = FastAPI(title="AC Tracker · 刷题轨迹", version=APP_VERSION)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -239,6 +241,16 @@ def sync_page_redirect() -> RedirectResponse:
 @app.get("/api/health")
 def health():
     return {"success": True, "data": {"status": "ok"}}
+
+
+@app.get("/api/app/about")
+def api_app_about():
+    return {"success": True, "data": get_about_payload()}
+
+
+@app.get("/api/app/update-check")
+def api_app_update_check():
+    return {"success": True, "data": get_update_check_payload()}
 
 
 @app.post("/api/sync")

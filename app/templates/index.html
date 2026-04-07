@@ -44,8 +44,19 @@
       <div class="app-topbar-inner">
         <span class="app-topbar-brand">AC Tracker</span>
         <span class="app-topbar-tagline">刷题轨迹</span>
+        <span class="app-topbar-spacer" aria-hidden="true"></span>
+        <button type="button" class="topbar-text-btn" id="about-open-button">关于</button>
       </div>
     </header>
+
+    <div id="update-banner" class="update-banner" hidden role="status" aria-live="polite">
+      <div class="update-banner-inner">
+        <span class="update-banner-icon" aria-hidden="true">⬆</span>
+        <span id="update-banner-message" class="update-banner-message"></span>
+        <a id="update-banner-link" class="update-banner-link" href="#" target="_blank" rel="noopener noreferrer">前往下载</a>
+        <button type="button" class="update-banner-dismiss" id="update-banner-dismiss">稍后提醒</button>
+      </div>
+    </div>
 
     <main class="app-main" id="app-main">
       <div class="shell shell-app">
@@ -352,6 +363,30 @@
         <span class="tab-label">设置</span>
       </a>
     </nav>
+  </div>
+
+  <div id="about-modal" class="modal-root" hidden aria-hidden="true">
+    <div class="modal-backdrop" id="about-modal-backdrop" tabindex="-1"></div>
+    <div
+      class="modal-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="about-modal-title"
+    >
+      <div class="modal-header">
+        <h2 id="about-modal-title">关于</h2>
+        <button type="button" class="modal-close" id="about-modal-close" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="about-lead" id="about-app-name"></p>
+        <p class="about-version-line"><span class="muted">当前版本</span> <strong id="about-version-label"></strong></p>
+        <p class="about-desc" id="about-desc"></p>
+        <ul class="about-links" id="about-links"></ul>
+        <h3 class="about-subtitle">第三方组件</h3>
+        <ul class="about-thirdparty" id="about-thirdparty"></ul>
+        <p class="about-legal muted">使用本软件请遵守各平台服务条款；详见仓库内说明与许可。</p>
+      </div>
+    </div>
   </div>
 
   <script src="/static/app.js"></script>
