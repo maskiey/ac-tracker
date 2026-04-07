@@ -73,4 +73,4 @@ python3 -m PyInstaller packaging/acm_tracker.spec --noconfirm
 
 首次打包若缺隐式依赖，在 `acm_tracker.spec` 的 `hiddenimports` 中补充后重试。
 
-**应用图标**：优先将设计稿放在 `packaging/icon_source.png`；若无该文件，脚本会使用 `app/static/icon.png` 生成 `packaging/icons/app.ico`（CI 在 PyInstaller 前会自动执行）。执行 `pip install pillow` 后运行 `python3 packaging/generate_icons.py` 可重新生成 `app/static/icon.png`、`.ico`；在 **macOS** 上同脚本会生成 `packaging/icons/app.icns`（供 PyInstaller `BUNDLE` 使用）。Windows 下 PyInstaller 会把 `app.ico` 打进安装目录根目录，Inno Setup 为开始菜单/桌面快捷方式指定 `IconFilename={app}\app.ico`，避免仅依赖 EXE 内嵌图标时仍显示旧图标。
+**应用图标**：优先将设计稿放在 `packaging/icon_source.png`；若无该文件，脚本会使用 `app/static/icon.png` 生成 `packaging/icons/app.ico`（CI 在 PyInstaller 前会自动执行）。执行 `pip install pillow` 后运行 `python3 packaging/generate_icons.py` 可重新生成 `app/static/icon.png`、`.ico`；在 **macOS** 上同脚本会生成 `packaging/icons/app.icns`（供 PyInstaller `BUNDLE` 使用）。Windows 的 `.ico` 由 `packaging/ico_win32.py` 按 **256×256 为首帧** 写入 DIB（Pillow 自带保存会对尺寸排序，易导致壳图标异常/「白纸」占位）。PyInstaller 会把 `app.ico` 打进安装目录根目录，Inno Setup 为快捷方式指定 `IconFilename={app}\app.ico`。

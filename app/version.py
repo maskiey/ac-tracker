@@ -2,7 +2,7 @@
 
 APP_NAME = "AC Tracker"
 APP_NAME_FULL = "AC Tracker · 刷题轨迹"
-APP_VERSION = "1.0.12"
+APP_VERSION = "1.0.13"
 
 REPO_OWNER = "maskiey"
 REPO_NAME = "acm-tracker"

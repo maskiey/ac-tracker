@@ -9,6 +9,8 @@ from pathlib import Path
 
 from PIL import Image, ImageChops, ImageDraw
 
+from ico_win32 import write_ico_bmp_ordered
+
 ROOT = Path(__file__).resolve().parents[1]
 OUT_PNG = ROOT / "app" / "static" / "icon.png"
 # 优先设计稿；否则用已生成的 Web 图标（便于 CI 只检出仓库即可打 Windows .ico）
@@ -50,22 +52,19 @@ def build_rgba_icon() -> Image.Image:
 
 
 def _write_windows_ico(master_rgba: Image.Image, path: Path) -> None:
-    """Write a multi-size .ico suitable for Explorer / taskbar / PyInstaller.
+    """写入多尺寸 .ico，供 Explorer / 任务栏 / PyInstaller / Inno 使用。
 
-    Windows shell and PyInstaller embed the *first* frame of the ICO as the primary
-    application icon. If that frame is 16x16, large UI shows a blurry upscaled
-    icon. Order sizes descending so the first image is 256x256.
+    Pillow 内置 ICO 保存会对尺寸 **排序**，目录第一项常为 16×16，Windows 易显示为
+    糊块或「白纸」占位。此处按 **256→16** 顺序写入 DIB 帧（见 ico_win32.py）。
+    白底合成避免透明通道在部分壳层解析异常。
     """
-    # 16–256 + high-DPI sizes used by Windows 10/11 shell
-    sizes = (256, 192, 128, 96, 64, 48, 40, 32, 24, 16)
-    imgs = [master_rgba.resize((s, s), Image.Resampling.LANCZOS) for s in sizes]
-    first, *rest = imgs
-    first.save(
-        path,
-        format="ICO",
-        sizes=[(i.width, i.height) for i in imgs],
-        append_images=rest,
-    )
+    sizes = (256, 128, 64, 48, 32, 16)
+    frames: list[Image.Image] = []
+    for s in sizes:
+        layer = master_rgba.resize((s, s), Image.Resampling.LANCZOS).convert("RGBA")
+        bg = Image.new("RGBA", (s, s), (255, 255, 255, 255))
+        frames.append(Image.alpha_composite(bg, layer))
+    write_ico_bmp_ordered(path, frames)
 
 
 def main() -> None:
