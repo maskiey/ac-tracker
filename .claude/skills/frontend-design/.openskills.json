@@ -1,0 +1,7 @@
+{
+  "source": "anthropics/skills",
+  "sourceType": "git",
+  "repoUrl": "https://github.com/anthropics/skills",
+  "subpath": "skills/frontend-design",
+  "installedAt": "2026-04-08T04:12:39.376Z"
+}
