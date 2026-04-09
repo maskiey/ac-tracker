@@ -1,15 +1,19 @@
 /* Theme tokens — only light / dark; 「跟随系统」由脚本解析为二者之一 */
 
 [data-theme="light"] {
+  --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --bg: #f1f5f9;
   --panel: rgba(255, 255, 255, 0.97);
   --line: rgba(15, 23, 42, 0.12);
   --text: #0b1220;
   --muted: #475569;
+  --link: #1d4ed8;
   --accent: #1d4ed8;
   --accent-bright: #3b82f6;
   --accent-2: #0f766e;
-  --shadow: 0 20px 48px rgba(15, 23, 42, 0.09);
+  --shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
   --body-bg: radial-gradient(circle at 16% 10%, rgba(29, 78, 216, 0.09), transparent 42%),
     radial-gradient(circle at 84% 90%, rgba(15, 118, 110, 0.07), transparent 38%),
     linear-gradient(180deg, #f8fafc 0%, #e8eef5 100%);
@@ -77,15 +81,19 @@
 }
 
 [data-theme="dark"] {
+  --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --bg: #0a0c10;
   --panel: rgba(20, 22, 30, 0.96);
   --line: rgba(248, 250, 252, 0.11);
   --text: #f1f5f9;
   --muted: #a1b0c4;
+  --link: #7dd3fc;
   --accent: #38bdf8;
   --accent-bright: #7dd3fc;
   --accent-2: #4ade80;
-  --shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+  --shadow: 0 18px 48px rgba(0, 0, 0, 0.48);
   --body-bg: radial-gradient(circle at 18% 8%, rgba(56, 189, 248, 0.1), transparent 44%),
     radial-gradient(circle at 88% 88%, rgba(74, 222, 128, 0.08), transparent 40%),
     linear-gradient(165deg, #0a0c10 0%, #12151f 100%);
@@ -158,6 +166,8 @@ html {
   background-color: var(--app-canvas);
   overflow-x: clip;
   height: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* 桌面壳（pywebview）：由 body 承担纵向滚动，原生滚轮可作用在 document 上；内层 .app-main 不再 overflow-y:auto */
@@ -226,7 +236,7 @@ html.desktop-shell body::-webkit-scrollbar-thumb:active {
 
 body {
   margin: 0;
-  font-family: "Avenir Next", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  font-family: var(--font-ui);
   color: var(--text);
   background: var(--body-bg);
   background-color: var(--app-canvas);
@@ -236,6 +246,7 @@ body {
   flex-direction: column;
   overflow-x: clip;
   -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
 }
 
 /* —— App 壳：顶栏 + 可滚动主区 + 底栏（避免 100vh+100vw 与浏览器缩放打架） —— */
@@ -244,23 +255,34 @@ body {
   flex-direction: column;
   flex: 1 1 auto;
   width: 100%;
-  max-width: min(960px, 100%);
+  max-width: min(1120px, 100%);
   min-height: 100dvh;
   margin: 0 auto;
   overflow: hidden;
-  padding-left: max(0px, env(safe-area-inset-left, 0));
-  padding-right: max(0px, env(safe-area-inset-right, 0));
+  padding-left: max(env(safe-area-inset-left, 0px), clamp(6px, 2.8vw, 20px));
+  padding-right: max(env(safe-area-inset-right, 0px), clamp(6px, 2.8vw, 20px));
   box-sizing: border-box;
+}
+
+@media (min-width: 1280px) {
+  .app-root {
+    max-width: min(1200px, 100%);
+  }
 }
 
 .app-topbar {
   flex-shrink: 0;
   z-index: 40;
-  padding: 12px 16px calc(10px + env(safe-area-inset-top, 0));
+  padding: clamp(10px, 2vw, 14px) clamp(12px, 3vw, 18px) calc(8px + env(safe-area-inset-top, 0));
   border-bottom: 1px solid var(--line);
   background: var(--app-chrome-bg);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 42%);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+}
+
+[data-theme="dark"] .app-topbar {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 40%);
 }
 
 .app-topbar-inner {
@@ -272,7 +294,7 @@ body {
 
 .app-topbar-brand {
   font-weight: 800;
-  font-size: 1.15rem;
+  font-size: clamp(1rem, 2.8vw, 1.15rem);
   letter-spacing: -0.03em;
 }
 
@@ -293,7 +315,7 @@ body {
   font: inherit;
   font-size: 13px;
   font-weight: 600;
-  color: var(--link, #2563eb);
+  color: var(--link);
   background: transparent;
   border: none;
   border-radius: 8px;
@@ -301,28 +323,43 @@ body {
 }
 
 .topbar-text-btn:hover {
-  background: rgba(37, 99, 235, 0.08);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
 html[data-theme="dark"] .topbar-text-btn {
-  color: #7cb3ff;
+  color: var(--link);
 }
 
 html[data-theme="dark"] .topbar-text-btn:hover {
-  background: rgba(125, 179, 255, 0.12);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
-/* 新版本提示条 */
+.topbar-text-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 新版本提示条（与主色一致，避免紫渐变模板感） */
 .update-banner {
   flex-shrink: 0;
   z-index: 35;
   padding: 10px 14px;
   border-bottom: 1px solid var(--line);
-  background: linear-gradient(90deg, rgba(29, 78, 216, 0.12), rgba(124, 58, 237, 0.1));
+  background: linear-gradient(
+    105deg,
+    color-mix(in srgb, var(--accent) 18%, transparent),
+    color-mix(in srgb, var(--accent-2) 12%, transparent) 55%,
+    color-mix(in srgb, var(--accent) 10%, transparent)
+  );
 }
 
 html[data-theme="dark"] .update-banner {
-  background: linear-gradient(90deg, rgba(56, 189, 248, 0.12), rgba(167, 139, 250, 0.1));
+  background: linear-gradient(
+    105deg,
+    color-mix(in srgb, var(--accent) 22%, transparent),
+    color-mix(in srgb, var(--accent-2) 14%, transparent) 52%,
+    color-mix(in srgb, var(--accent) 12%, transparent)
+  );
 }
 
 .update-banner-inner {
@@ -330,7 +367,7 @@ html[data-theme="dark"] .update-banner {
   flex-wrap: wrap;
   align-items: center;
   gap: 10px 12px;
-  max-width: min(960px, 100%);
+  max-width: min(1120px, 100%);
   margin: 0 auto;
   font-size: 13px;
   line-height: 1.45;
@@ -348,7 +385,7 @@ html[data-theme="dark"] .update-banner {
 
 .update-banner-link {
   font-weight: 600;
-  color: var(--link, #1d4ed8);
+  color: var(--link);
   text-decoration: none;
 }
 
@@ -475,7 +512,7 @@ html[data-theme="dark"] .update-banner-dismiss {
 }
 
 .about-links a {
-  color: var(--link, #1d4ed8);
+  color: var(--link);
   word-break: break-all;
 }
 
@@ -571,11 +608,11 @@ html[data-theme="dark"] .update-banner-dismiss {
   display: flex;
   border-top: 1px solid var(--line);
   background: var(--app-tabbar-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   box-shadow: 0 -6px 28px rgba(15, 23, 42, 0.06);
-  padding: 6px 8px calc(8px + env(safe-area-inset-bottom, 0));
-  gap: 4px;
+  padding: clamp(4px, 1.2vw, 8px) clamp(6px, 2vw, 10px) calc(6px + env(safe-area-inset-bottom, 0));
+  gap: clamp(2px, 1vw, 4px);
 }
 
 [data-theme="dark"] .app-tabbar {
@@ -585,18 +622,24 @@ html[data-theme="dark"] .update-banner-dismiss {
 .tab-item {
   flex: 1;
   min-width: 0;
+  min-height: 44px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 8px 6px;
+  padding: clamp(6px, 1.5vw, 10px) clamp(4px, 1.5vw, 8px);
   border-radius: 14px;
   text-decoration: none;
   color: var(--muted);
   font-size: 11px;
   font-weight: 600;
-  transition: color 0.15s ease, background 0.15s ease;
+  transition: color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.tab-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .tab-item .tab-icon {
@@ -618,14 +661,17 @@ html[data-theme="dark"] .update-banner-dismiss {
 
 .app-lead {
   margin: 0 0 14px;
+  padding-left: 12px;
+  border-left: 3px solid color-mix(in srgb, var(--accent) 55%, var(--accent-2));
   font-size: 14px;
   color: var(--muted);
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .shell-app {
   width: 100%;
-  padding: 12px 14px max(20px, calc(12px + env(safe-area-inset-bottom, 0)));
+  padding: clamp(10px, 2.2vw, 14px) clamp(10px, 3vw, 18px)
+    max(16px, calc(12px + env(safe-area-inset-bottom, 0)));
   margin: 0;
 }
 
@@ -667,6 +713,35 @@ html[data-theme="dark"] .update-banner-dismiss {
   color: var(--muted);
 }
 
+.settings-checkbox-row {
+  margin-bottom: 4px;
+}
+
+.settings-checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.settings-checkbox-label input {
+  margin-top: 3px;
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.settings-checkbox-label span {
+  color: var(--text);
+}
+
 .theme-picker-inline {
   min-width: 3rem;
 }
@@ -694,9 +769,9 @@ html[data-theme="dark"] .update-banner-dismiss {
 
 .shell {
   width: 100%;
-  max-width: 1180px;
-  margin: 24px auto 48px;
-  padding: 0 16px;
+  max-width: 100%;
+  margin: clamp(12px, 3vw, 24px) auto clamp(20px, 5vw, 48px);
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -720,7 +795,7 @@ html[data-theme="dark"] .update-banner-dismiss {
 
 .view-panel.active {
   display: grid;
-  gap: 18px;
+  gap: clamp(14px, 3vw, 20px);
 }
 
 .nav-rail {
@@ -910,17 +985,33 @@ button:disabled {
 
 .card {
   min-width: 0;
-  padding: 22px;
-  border-radius: 24px;
+  padding: clamp(16px, 3.2vw, 22px);
+  border-radius: clamp(18px, 2.2vw, 24px);
   border: 1px solid var(--line);
   background: var(--panel);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .card:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow), 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 22%, var(--line));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
 }
 
 .card h2 {
   margin: 0 0 12px;
-  font-size: 20px;
+  font-size: clamp(1.05rem, 2.6vw, 1.25rem);
   letter-spacing: -0.02em;
   font-weight: 700;
 }
@@ -945,9 +1036,12 @@ button:disabled {
 
 .metric .value {
   margin-top: 8px;
-  font-size: 30px;
+  font-size: clamp(1.35rem, 5vw, 1.9rem);
   font-weight: 700;
   letter-spacing: -0.04em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
 }
 
 #tags-chart,
@@ -1216,7 +1310,7 @@ button:disabled {
   width: 100%;
   min-height: 76px;
   padding: 10px 12px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   border-radius: 12px;
   border: 1px solid var(--input-border);
@@ -1423,5 +1517,61 @@ button:disabled {
 
   .theme-picker {
     width: 100%;
+  }
+}
+
+/* 极窄屏与折叠外屏 */
+@media (max-width: 380px) {
+  .chip {
+    padding: 8px 11px;
+    font-size: 12px;
+  }
+
+  .toolbar.compact {
+    gap: 6px;
+  }
+
+  .metric {
+    padding: 12px 14px;
+  }
+
+  .modal-dialog {
+    width: min(100%, 100vw - 12px);
+    border-radius: clamp(12px, 4vw, 14px);
+  }
+}
+
+/* 横屏或矮视口：压缩底栏与主区内边距，避免内容区过小 */
+@media (max-height: 520px) and (orientation: landscape) {
+  .shell-app {
+    padding-top: 6px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 0));
+  }
+
+  .app-tabbar {
+    padding-top: 2px;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0));
+  }
+
+  .tab-item {
+    min-height: 40px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  #tags-chart,
+  #tags-pie-chart {
+    height: min(260px, 42vh);
+  }
+}
+
+/* 降低毛玻璃合成成本（系统开启「减少透明度」时） */
+@media (prefers-reduced-transparency: reduce) {
+  .app-topbar,
+  .app-tabbar,
+  .card,
+  .modal-backdrop {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 }

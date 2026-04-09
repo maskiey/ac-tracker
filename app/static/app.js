@@ -1,5 +1,6 @@
 const THEME_PREF_KEY = "acm-tracker-theme-preference";
 const THEME_LEGACY_KEY = "acm-tracker-theme";
+const AUTO_SYNC_ON_OPEN_KEY = "acm-tracker-auto-sync-on-open";
 
 function readThemePreference() {
   try {
@@ -583,14 +584,20 @@ function renderSummary(data) {
 function renderTags(data) {
   const ct = readChartTheme();
   cachedTagsData = data;
+  const w = typeof window !== "undefined" ? window.innerWidth : 720;
+  const narrow = w < 420;
+  const mid = w < 640;
+  const gridBottom = narrow ? 96 : mid ? 84 : 74;
+  const axisRotate = narrow ? 38 : mid ? 32 : 28;
   tagsChart.setOption({
     tooltip: { trigger: "item" },
     xAxis: {
       type: "category",
       data: data.map((item) => item.tag),
       axisLabel: {
-        rotate: 28,
+        rotate: axisRotate,
         color: ct.text,
+        fontSize: narrow ? 10 : 11,
       },
     },
     yAxis: {
@@ -598,7 +605,7 @@ function renderTags(data) {
       axisLabel: { color: ct.text },
       splitLine: { lineStyle: { color: ct.gridLine } },
     },
-    grid: { top: 18, left: 34, right: 18, bottom: 74 },
+    grid: { top: 18, left: narrow ? 28 : 34, right: narrow ? 10 : 18, bottom: gridBottom },
     series: [
       {
         type: "bar",
@@ -799,6 +806,64 @@ async function loadTagProblems(tag) {
   }
 }
 
+function readAutoSyncOnOpenPreference() {
+  try {
+    const v = localStorage.getItem(AUTO_SYNC_ON_OPEN_KEY);
+    return v === null || v === "" || v !== "0";
+  } catch (e) {
+    return true;
+  }
+}
+
+function initAutoSyncOnOpenCheckbox() {
+  const el = document.getElementById("auto-sync-on-open");
+  if (!el) return;
+  el.checked = readAutoSyncOnOpenPreference();
+  el.addEventListener("change", () => {
+    try {
+      localStorage.setItem(AUTO_SYNC_ON_OPEN_KEY, el.checked ? "1" : "0");
+    } catch (e) {
+      /* ignore */
+    }
+  });
+}
+
+/** 启动后仅对已配置 OJ 做增量同步（非全量、非「尝试全部平台」） */
+async function startupIncrementalSyncIfNeeded() {
+  if (!readAutoSyncOnOpenPreference()) return;
+  let configured = [];
+  try {
+    const configRes = await fetchJSON("/api/config");
+    configured = configRes.data.configured_sources || [];
+  } catch (e) {
+    return;
+  }
+  if (!configured.length) return;
+  try {
+    const response = await fetchJSON("/api/sync", {
+      method: "POST",
+      body: JSON.stringify({
+        source: null,
+        force_full: false,
+        only_configured: true,
+      }),
+    });
+    if (syncStatus) {
+      syncStatus.textContent = `启动时已增量同步：${formatSyncSummary(response.data)}`;
+    }
+    await refreshDashboard();
+  } catch (error) {
+    const msg = error && error.message ? String(error.message) : "";
+    if (
+      msg.includes("409") ||
+      msg.includes("already running") ||
+      msg.includes("A sync job is already running")
+    ) {
+      return;
+    }
+  }
+}
+
 async function triggerSync(forceFull = false) {
   if (syncAbortController) {
     try {
@@ -814,6 +879,7 @@ async function triggerSync(forceFull = false) {
     const payload = {
       source: sourceSelect.value || null,
       force_full: forceFull,
+      only_configured: false,
     };
     const response = await fetchJSON("/api/sync", {
       method: "POST",
@@ -1149,6 +1215,10 @@ async function checkUpdateBanner() {
 loadAboutModal();
 checkUpdateBanner();
 
-refreshDashboard().catch((error) => {
-  syncStatus.textContent = `初始化加载失败：${error.message}`;
-});
+initAutoSyncOnOpenCheckbox();
+
+refreshDashboard()
+  .then(() => startupIncrementalSyncIfNeeded())
+  .catch((error) => {
+    syncStatus.textContent = `初始化加载失败：${error.message}`;
+  });

@@ -36,7 +36,7 @@
   <link rel="icon" href="/static/icon.png" type="image/png" sizes="512x512" />
   <link rel="apple-touch-icon" href="/static/icon.png" />
   <link rel="stylesheet" href="/static/themes.css" />
-  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.simple.min.js"></script>
 </head>
 <body data-default-view="{{ default_view or 'overview' }}">
   <div class="app-root" id="app-root">
@@ -206,6 +206,12 @@
 
           <section class="card settings-section">
             <h2>同步</h2>
+            <div class="settings-row settings-checkbox-row">
+              <label class="settings-checkbox-label" for="auto-sync-on-open">
+                <input type="checkbox" id="auto-sync-on-open" checked />
+                <span>打开应用时自动增量同步已配置网站（新增提交，非全量）</span>
+              </label>
+            </div>
             <div class="toolbar settings-sync-toolbar">
               <button id="sync-button" type="button">立即同步</button>
               <button id="force-sync-button" type="button" class="muted-button">全量同步</button>

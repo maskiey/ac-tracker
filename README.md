@@ -2,7 +2,7 @@
 
 维护者：[@maskiey](https://github.com/maskiey)
 
-自托管的刷题记录可视化：用 FastAPI + SQLite 汇总多平台提交，展示年度 AC 热力图、周期统计、知识点分布与规则化周报文案。前端使用原生 JS 与 [Apache ECharts](https://echarts.apache.org/)（通过 [jsDelivr](https://www.jsdelivr.com/) CDN 加载）。
+自托管的刷题记录可视化：用 FastAPI + SQLite 汇总多平台提交，展示年度 AC 热力图、周期统计、知识点分布与规则化周报文案。前端使用原生 JS 与 [Apache ECharts](https://echarts.apache.org/)（通过 [jsDelivr](https://www.jsdelivr.com/) 加载精简版 `echarts.simple.min.js`，仅包含柱状图/饼图等当前用到的图表能力）。
 
 ## 法律与第三方说明
 
@@ -22,7 +22,7 @@
 
 ```text
 acm-tracker/
-├── app/
+├── app/                    # FastAPI 应用、抓取与页面
 │   ├── main.py
 │   ├── database.py
 │   ├── fetcher.py
@@ -31,15 +31,18 @@ acm-tracker/
 │   ├── services/
 │   ├── templates/
 │   └── static/
-├── tests/
-├── data/                 # SQLite 等运行时数据（默认不纳入版本库）
+├── tests/                  # pytest
+├── data/                   # SQLite 等运行时数据（见 .gitignore，默认不提交）
+├── .claude/skills/         # OpenSkills 同步的 Agent 技能（仅文档/脚本资源，不参与运行时）
+├── AGENTS.md               # OpenSkills 生成的技能索引（供 AI 代理阅读）
 ├── .env.example
-├── requirements.txt      # 运行所需
-├── requirements-dev.txt  # 含 pytest，开发/CI 使用
-├── requirements-desktop.txt  # 桌面壳 + 打包
-├── run_desktop.py        # 嵌入窗口入口
-├── packaging/            # PyInstaller 配置与构建说明
+├── requirements.txt        # 运行所需
+├── requirements-dev.txt    # 含 pytest，开发/CI 使用
+├── requirements-desktop.txt
+├── run_desktop.py          # 桌面嵌入窗口入口
+├── packaging/              # PyInstaller 与安装包构建
 ├── LICENSE
+├── SECURITY.md
 └── README.md
 ```
 
@@ -81,7 +84,7 @@ python run_desktop.py
 | `/` `/knowledge` `/problems` `/settings` | 页面（类 App 底栏切换；`/sync` 重定向到 `/settings`） |
 | `/heatmap` | 重定向至总览锚点（兼容旧链接） |
 | `GET /api/health` | 健康检查 |
-| `POST /api/sync` | 触发同步（body：`source`, `force_full`） |
+| `POST /api/sync` | 触发同步（body：`source`, `force_full`, `only_configured`；后者为 true 时仅同步已配置账号，非全量） |
 | `GET /api/heatmap?year=` | 年度热力图数据 |
 | `GET /api/summary` | 总览数字与最近同步 |
 | `GET /api/stats/weekly` | 本周统计 |
@@ -101,6 +104,8 @@ python run_desktop.py
 pip install -r requirements-dev.txt
 pytest
 ```
+
+测试发现规则见根目录 `pyproject.toml` 中的 `[tool.pytest.ini_options]`（默认收集 `tests/`）。
 
 ## 安全
 

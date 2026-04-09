@@ -11,6 +11,10 @@ class SyncRequest(BaseModel):
         description="codeforces, luogu, nowcoder, atcoder, or omitted for all",
     )
     force_full: bool = False
+    only_configured: bool = Field(
+        default=False,
+        description="When true and source is omitted, sync only OJ accounts that are actually configured (skips empty handles).",
+    )
 
 
 class ConfigPayload(BaseModel):
