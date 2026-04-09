@@ -125,10 +125,14 @@ def public_config() -> dict:
         "configured_sources": [
             source
             for source, enabled in (
-                ("codeforces", bool(values.get("CODEFORCES_HANDLE"))),
-                ("luogu", bool(values.get("LUOGU_UID") or values.get("LUOGU_USERNAME"))),
-                ("nowcoder", bool(values.get("NOWCODER_UID"))),
-                ("atcoder", bool(values.get("ATCODER_USERNAME"))),
+                ("codeforces", bool(values.get("CODEFORCES_HANDLE", "").strip())),
+                (
+                    "luogu",
+                    bool(values.get("LUOGU_COOKIE", "").strip())
+                    and bool(values.get("LUOGU_UID", "").strip() or values.get("LUOGU_USERNAME", "").strip()),
+                ),
+                ("nowcoder", bool(values.get("NOWCODER_UID", "").strip())),
+                ("atcoder", bool(values.get("ATCODER_USERNAME", "").strip())),
             )
             if enabled
         ],
@@ -138,11 +142,20 @@ def public_config() -> dict:
     }
 
 
-def sync_once(source: Optional[str] = None, force_full: bool = False) -> dict:
+def sync_once(
+    source: Optional[str] = None,
+    force_full: bool = False,
+    *,
+    only_configured: bool = False,
+) -> dict:
     db = SessionLocal()
     try:
         fetcher = OJFetcher(db, FetcherConfig.from_env())
-        return fetcher.sync_all(source=source, force_full=force_full)
+        return fetcher.sync_all(
+            source=source,
+            force_full=force_full,
+            only_configured=only_configured,
+        )
     finally:
         db.close()
 
@@ -154,7 +167,7 @@ def poller_loop() -> None:
             poller_stop_event.wait(30)
             continue
         try:
-            sync_once(force_full=False)
+            sync_once(force_full=False, only_configured=True)
         except Exception:
             pass
         poller_stop_event.wait(interval * 60)
@@ -257,7 +270,11 @@ def api_app_update_check():
 def sync_submissions(payload: SyncRequest, db: Session = Depends(get_db)):
     try:
         fetcher = OJFetcher(db, FetcherConfig.from_env())
-        result = fetcher.sync_all(source=payload.source, force_full=payload.force_full)
+        result = fetcher.sync_all(
+            source=payload.source,
+            force_full=payload.force_full,
+            only_configured=payload.only_configured,
+        )
         return {"success": True, "data": result}
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc

@@ -778,6 +778,23 @@ class OJFetcher:
                 pass
         return None if allow_none else datetime.now(timezone.utc)
 
+    def _is_source_configured(self, source: str) -> bool:
+        """Whether this OJ has enough config to run a fetch (matches public_config / fetch guards)."""
+        s = (source or "").strip().lower()
+        if s == "codeforces":
+            return bool((self.config.codeforces_handle or "").strip())
+        if s == "luogu":
+            if not (self.config.luogu_cookie or "").strip():
+                return False
+            uid = (self.config.luogu_uid or "").strip()
+            username = (self.config.luogu_username or "").strip()
+            return bool(uid or username)
+        if s == "nowcoder":
+            return bool((self.config.nowcoder_uid or "").strip())
+        if s == "atcoder":
+            return bool((self.config.atcoder_username or "").strip())
+        return False
+
     def _filter_incremental(self, source: str, records: list[dict], force_full: bool) -> list[dict]:
         if force_full:
             return records
@@ -1120,7 +1137,13 @@ class OJFetcher:
         self.db.add(sync_run)
         self.db.commit()
 
-    def sync_all(self, source: str | None = None, force_full: bool = False) -> dict:
+    def sync_all(
+        self,
+        source: str | None = None,
+        force_full: bool = False,
+        *,
+        only_configured: bool = False,
+    ) -> dict:
         target = source.lower() if source else None
         if not self._sync_lock.acquire(blocking=False):
             raise RuntimeError("A sync job is already running")
@@ -1150,6 +1173,9 @@ class OJFetcher:
                 jobs.append(("nowcoder", lambda: fetch_nowcoder_submissions(self)))
             if target in (None, "atcoder"):
                 jobs.append(("atcoder", lambda: fetch_atcoder_submissions(self)))
+
+            if only_configured:
+                jobs = [(n, f) for n, f in jobs if self._is_source_configured(n)]
 
             for source_name, func in jobs:
                 try:
@@ -1202,4 +1228,4 @@ class OJFetcher:
             self._sync_lock.release()
 
     def poll_latest(self, source: str | None = None) -> dict:
-        return self.sync_all(source=source, force_full=False)
+        return self.sync_all(source=source, force_full=False, only_configured=True)
